@@ -12,10 +12,21 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Badge
+import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.LocationCity
+import androidx.compose.material.icons.filled.Logout
+import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.PinDrop
+import androidx.compose.material.icons.filled.VerifiedUser
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -26,17 +37,23 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import org.example.proyectogestionpagos.data.model.HomeUserData
 import org.example.proyectogestionpagos.data.network.AuthApiService
 import org.example.proyectogestionpagos.data.session.SessionManager
+import org.example.proyectogestionpagos.ui.components.AppBottomBar
 import org.example.proyectogestionpagos.ui.theme.AppColors
 
 @Composable
-fun HomeScreen(onLogout: () -> Unit) {
+fun HomeScreen(
+    onLogout: () -> Unit,
+    onProfileClick: () -> Unit,
+) {
     val authApiService = remember { AuthApiService() }
     var isLoading by remember { mutableStateOf(true) }
     var homeUserData by remember { mutableStateOf<HomeUserData?>(null) }
@@ -71,12 +88,20 @@ fun HomeScreen(onLogout: () -> Unit) {
             .verticalScroll(rememberScrollState())
             .padding(20.dp),
     ) {
-        Text(
-            text = "Bienvenido",
-            style = MaterialTheme.typography.headlineMedium,
-            color = AppColors.PrimaryDark,
-            fontWeight = FontWeight.Bold,
-        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                imageVector = Icons.Filled.Home,
+                contentDescription = "Inicio",
+                tint = AppColors.PrimaryDark,
+            )
+            Text(
+                text = "Bienvenido",
+                modifier = Modifier.padding(start = 8.dp),
+                style = MaterialTheme.typography.headlineMedium,
+                color = AppColors.PrimaryDark,
+                fontWeight = FontWeight.Bold,
+            )
+        }
 
         Spacer(modifier = Modifier.height(6.dp))
         Text(
@@ -105,19 +130,27 @@ fun HomeScreen(onLogout: () -> Unit) {
                     tonalElevation = 2.dp,
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        InfoRow("Nombre", homeUserData?.nombre_completo ?: "-")
-                        InfoRow("Correo", homeUserData?.correo ?: "-")
-                        InfoRow("Teléfono", homeUserData?.telefono ?: "-")
-                        InfoRow("Ciudad", homeUserData?.ciudad ?: "-")
-                        InfoRow("Dirección", homeUserData?.direccion ?: "-")
-                        InfoRow("Fecha registro", homeUserData?.fecha_registro ?: "-")
+                        InfoRow(Icons.Filled.Badge, "Nombre", homeUserData?.nombre_completo ?: "-")
+                        InfoRow(Icons.Filled.Email, "Correo", homeUserData?.correo ?: "-")
+                        InfoRow(Icons.Filled.Phone, "Teléfono", homeUserData?.telefono ?: "-")
+                        InfoRow(Icons.Filled.LocationCity, "Ciudad", homeUserData?.ciudad ?: "-")
+                        InfoRow(Icons.Filled.PinDrop, "Dirección", homeUserData?.direccion ?: "-")
+                        InfoRow(Icons.Filled.CalendarMonth, "Fecha registro", homeUserData?.fecha_registro ?: "-")
 
                         Spacer(modifier = Modifier.height(10.dp))
-                        Text(
-                            text = "Estado de cuenta",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = Color(0xFF7A8198),
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Filled.VerifiedUser,
+                                contentDescription = "Estado de cuenta",
+                                tint = Color(0xFF7A8198),
+                            )
+                            Text(
+                                text = "Estado de cuenta",
+                                modifier = Modifier.padding(start = 6.dp),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = Color(0xFF7A8198),
+                            )
+                        }
                         Spacer(modifier = Modifier.height(6.dp))
                         Text(
                             text = homeUserData?.estado_cuenta ?: "-",
@@ -132,6 +165,13 @@ fun HomeScreen(onLogout: () -> Unit) {
                         )
                     }
                 }
+
+                Spacer(modifier = Modifier.height(14.dp))
+                AppBottomBar(
+                    currentSection = "home",
+                    onHomeClick = {},
+                    onProfileClick = onProfileClick,
+                )
             }
 
             else -> {
@@ -152,6 +192,11 @@ fun HomeScreen(onLogout: () -> Unit) {
             shape = RoundedCornerShape(10.dp),
             colors = ButtonDefaults.buttonColors(containerColor = AppColors.PrimaryDark),
         ) {
+            Icon(
+                imageVector = Icons.Filled.Logout,
+                contentDescription = "Cerrar sesión",
+                modifier = Modifier.padding(end = 8.dp),
+            )
             Text("Cerrar sesión")
         }
     }
@@ -178,13 +223,21 @@ fun HomeScreen(onLogout: () -> Unit) {
 }
 
 @Composable
-private fun InfoRow(label: String, value: String) {
+private fun InfoRow(icon: ImageVector, label: String, value: String) {
     Column(modifier = Modifier.padding(bottom = 10.dp)) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelMedium,
-            color = Color(0xFF7A8198),
-        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                imageVector = icon,
+                contentDescription = label,
+                tint = Color(0xFF7A8198),
+            )
+            Text(
+                text = label,
+                modifier = Modifier.padding(start = 6.dp),
+                style = MaterialTheme.typography.labelMedium,
+                color = Color(0xFF7A8198),
+            )
+        }
         Spacer(modifier = Modifier.height(2.dp))
         Text(
             text = value,

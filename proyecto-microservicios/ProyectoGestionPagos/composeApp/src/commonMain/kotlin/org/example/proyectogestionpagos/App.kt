@@ -31,6 +31,7 @@ fun App() {
                         SessionManager.clearSession()
                         navigator.navigateTo(AppDestination.Login)
                     },
+                    onProfileClick = { navigator.navigateTo(AppDestination.Profile) },
                 )
 
                 AppDestination.Profile -> ProfileScreen(

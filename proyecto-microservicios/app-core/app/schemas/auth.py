@@ -36,3 +36,7 @@ class ApiResponse(BaseModel):
     success: bool
     message: str
     data: Optional[dict] = None
+
+
+class PaymentPreparationRequest(BaseModel):
+    id_factura: int

@@ -9,15 +9,19 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -32,52 +36,47 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import org.example.proyectogestionpagos.data.model.HomeUserData
+import org.example.proyectogestionpagos.data.model.BillingOverviewData
+import org.example.proyectogestionpagos.data.model.SuscripcionData
+import org.example.proyectogestionpagos.data.model.UsuarioServicioData
 import org.example.proyectogestionpagos.data.network.AuthApiService
 import org.example.proyectogestionpagos.data.session.SessionManager
-import proyectogestionpagos.composeapp.generated.resources.Res
-import proyectogestionpagos.composeapp.generated.resources.ic_badge
-import proyectogestionpagos.composeapp.generated.resources.ic_calendar_month
-import proyectogestionpagos.composeapp.generated.resources.ic_email
-import proyectogestionpagos.composeapp.generated.resources.ic_home
-import proyectogestionpagos.composeapp.generated.resources.ic_location_city
-import proyectogestionpagos.composeapp.generated.resources.ic_logout
-import proyectogestionpagos.composeapp.generated.resources.ic_phone
-import proyectogestionpagos.composeapp.generated.resources.ic_pin_drop
-import proyectogestionpagos.composeapp.generated.resources.ic_verified_user
 import org.example.proyectogestionpagos.ui.components.AppBottomBar
 import org.example.proyectogestionpagos.ui.theme.AppColors
-import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.painterResource
+import proyectogestionpagos.composeapp.generated.resources.Res
+import proyectogestionpagos.composeapp.generated.resources.ic_home
+import proyectogestionpagos.composeapp.generated.resources.ic_logout
 
 @Composable
 fun HomeScreen(
     onLogout: () -> Unit,
     onProfileClick: () -> Unit,
+    onOpenInvoiceDetail: () -> Unit,
+    onGoToPayment: () -> Unit,
 ) {
     val authApiService = remember { AuthApiService() }
     var isLoading by remember { mutableStateOf(true) }
-    var homeUserData by remember { mutableStateOf<HomeUserData?>(null) }
+    var billingData by remember { mutableStateOf<BillingOverviewData?>(null) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
-        println("[HomeScreen] Cargando datos del usuario para Home")
+        println("[HomeScreen] Inicio de carga de suscripciones")
         val idUsuario = SessionManager.idUsuario
         if (idUsuario == null) {
-            println("[HomeScreen] Sesión inválida: id_usuario no encontrado")
-            errorMessage = "Sesión inválida o expirada"
+            println("[HomeScreen] Sesión no válida")
+            errorMessage = "Debe iniciar sesión nuevamente"
             isLoading = false
             return@LaunchedEffect
         }
 
-        println("[HomeScreen] id_usuario recuperado correctamente: $idUsuario")
-        val response = authApiService.getHomeUserData(idUsuario)
-
+        val response = authApiService.getBillingOverview(idUsuario)
         if (response.success && response.data != null) {
-            println("[HomeScreen] Datos cargados exitosamente")
-            homeUserData = response.data
+            println("[HomeScreen] Datos de suscripciones cargados exitosamente")
+            billingData = response.data
+            SessionManager.saveBillingOverview(response.data)
         } else {
-            println("[HomeScreen] No fue posible obtener datos del usuario: ${response.message}")
+            println("[HomeScreen] Error carga resumen: ${response.message}")
             errorMessage = response.message
         }
         isLoading = false
@@ -87,7 +86,7 @@ fun HomeScreen(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(20.dp),
+            .padding(16.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
@@ -96,78 +95,48 @@ fun HomeScreen(
                 tint = AppColors.PrimaryDark,
             )
             Text(
-                text = "Bienvenido",
+                text = "Suscripciones y facturación",
                 modifier = Modifier.padding(start = 8.dp),
-                style = MaterialTheme.typography.headlineMedium,
+                style = MaterialTheme.typography.titleLarge,
                 color = AppColors.PrimaryDark,
                 fontWeight = FontWeight.Bold,
             )
         }
 
-        Spacer(modifier = Modifier.height(6.dp))
-        Text(
-            text = homeUserData?.nombre_completo ?: "Usuario",
-            style = MaterialTheme.typography.titleMedium,
-            color = Color(0xFF4E5270),
-        )
-
-        Spacer(modifier = Modifier.height(18.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
         when {
             isLoading -> {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center,
-                ) {
-                    CircularProgressIndicator(color = AppColors.Primary)
-                }
-            }
-
-            homeUserData != null -> {
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(14.dp),
-                    shadowElevation = 2.dp,
-                    tonalElevation = 2.dp,
                 ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        InfoRow(Res.drawable.ic_badge, "Nombre", homeUserData?.nombre_completo ?: "-")
-                        InfoRow(Res.drawable.ic_email, "Correo", homeUserData?.correo ?: "-")
-                        InfoRow(Res.drawable.ic_phone, "Teléfono", homeUserData?.telefono ?: "-")
-                        InfoRow(Res.drawable.ic_location_city, "Ciudad", homeUserData?.ciudad ?: "-")
-                        InfoRow(Res.drawable.ic_pin_drop, "Dirección", homeUserData?.direccion ?: "-")
-                        InfoRow(Res.drawable.ic_calendar_month, "Fecha registro", homeUserData?.fecha_registro ?: "-")
-
-                        Spacer(modifier = Modifier.height(10.dp))
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                painter = painterResource(Res.drawable.ic_verified_user),
-                                contentDescription = "Estado de cuenta",
-                                tint = Color(0xFF7A8198),
-                            )
-                            Text(
-                                text = "Estado de cuenta",
-                                modifier = Modifier.padding(start = 6.dp),
-                                style = MaterialTheme.typography.labelMedium,
-                                color = Color(0xFF7A8198),
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Text(
-                            text = homeUserData?.estado_cuenta ?: "-",
-                            modifier = Modifier
-                                .background(
-                                    color = Color(0xFFDFF5E5),
-                                    shape = RoundedCornerShape(10.dp),
-                                )
-                                .padding(horizontal = 12.dp, vertical = 6.dp),
-                            color = Color(0xFF19713E),
-                            fontWeight = FontWeight.SemiBold,
-                        )
+                    Row(
+                        modifier = Modifier.padding(18.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        CircularProgressIndicator(color = AppColors.Primary)
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text("Cargando suscripciones y facturación...")
                     }
                 }
+            }
 
-                Spacer(modifier = Modifier.height(14.dp))
+            billingData != null -> {
+                BillingResumeCard(
+                    data = billingData!!,
+                    onOpenInvoiceDetail = onOpenInvoiceDetail,
+                    onGoToPayment = onGoToPayment,
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+                SuscripcionesSection(billingData!!.suscripciones)
+
+                Spacer(modifier = Modifier.height(12.dp))
+                ServiciosSection(billingData!!.servicios_adicionales)
+
+                Spacer(modifier = Modifier.height(12.dp))
                 AppBottomBar(
                     currentSection = "home",
                     onHomeClick = {},
@@ -176,14 +145,20 @@ fun HomeScreen(
             }
 
             else -> {
-                Text(
-                    text = "No fue posible cargar la información del usuario.",
-                    color = Color(0xFFB3261E),
-                )
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp),
+                ) {
+                    Text(
+                        text = "Error al cargar la información. Inténtalo nuevamente.",
+                        modifier = Modifier.padding(16.dp),
+                        color = Color(0xFFB3261E),
+                    )
+                }
             }
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(20.dp))
         Button(
             onClick = {
                 SessionManager.clearSession()
@@ -209,7 +184,7 @@ fun HomeScreen(
             text = { Text(errorMessage ?: "") },
             confirmButton = {
                 TextButton(onClick = {
-                    val shouldGoLogin = errorMessage == "Sesión inválida o expirada"
+                    val shouldGoLogin = errorMessage == "Debe iniciar sesión nuevamente"
                     errorMessage = null
                     if (shouldGoLogin) {
                         SessionManager.clearSession()
@@ -224,27 +199,217 @@ fun HomeScreen(
 }
 
 @Composable
-private fun InfoRow(icon: DrawableResource, label: String, value: String) {
-    Column(modifier = Modifier.padding(bottom = 10.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-                painter = painterResource(icon),
-                contentDescription = label,
-                tint = Color(0xFF7A8198),
-            )
+private fun BillingResumeCard(
+    data: BillingOverviewData,
+    onOpenInvoiceDetail: () -> Unit,
+    onGoToPayment: () -> Unit,
+) {
+    val factura = data.factura_actual
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                text = label,
-                modifier = Modifier.padding(start = 6.dp),
-                style = MaterialTheme.typography.labelMedium,
-                color = Color(0xFF7A8198),
+                text = "Resumen de facturación",
+                style = MaterialTheme.typography.titleMedium,
+                color = AppColors.PrimaryDark,
+                fontWeight = FontWeight.Bold,
             )
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = "Estado general de cuenta: ${data.estado_cuenta}",
+                color = Color(0xFF5E6282),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+            if (factura == null) {
+                Text(
+                    text = "No se encontró una factura vigente",
+                    color = AppColors.NeutralText,
+                )
+            } else {
+                Text("Factura actual: ${factura.numero_factura}", color = AppColors.PrimaryDark)
+                Text("Período: ${factura.periodo_mes}/${factura.periodo_anio}", color = AppColors.NeutralText)
+                Text("Subtotal: $${factura.subtotal}", color = AppColors.NeutralText)
+                Text("Impuesto: $${factura.impuesto}", color = AppColors.NeutralText)
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "Total a pagar: $${factura.total}",
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = AppColors.PrimaryDark,
+                    fontWeight = FontWeight.Bold,
+                )
+                Text("Estado factura: ${factura.estado_factura}", color = AppColors.NeutralText)
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                OutlinedButton(
+                    onClick = onOpenInvoiceDetail,
+                    enabled = factura != null,
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Text("Ver detalle")
+                }
+                Button(
+                    onClick = onGoToPayment,
+                    enabled = factura != null,
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.buttonColors(containerColor = AppColors.Primary),
+                ) {
+                    Text("Pagar ahora")
+                }
+            }
         }
-        Spacer(modifier = Modifier.height(2.dp))
+    }
+}
+
+@Composable
+private fun SuscripcionesSection(suscripciones: List<SuscripcionData>) {
+    Text(
+        text = "Suscripciones",
+        style = MaterialTheme.typography.titleMedium,
+        color = AppColors.PrimaryDark,
+        fontWeight = FontWeight.Bold,
+    )
+    Spacer(modifier = Modifier.height(8.dp))
+
+    if (suscripciones.isEmpty()) {
+        EmptyDataCard("No se encontraron suscripciones activas")
+        return
+    }
+
+    suscripciones.forEach { suscripcion ->
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 8.dp),
+            shape = RoundedCornerShape(14.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+        ) {
+            Column(modifier = Modifier.padding(14.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = suscripcion.nombre_plan,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = AppColors.PrimaryDark,
+                        )
+                        Text(
+                            text = suscripcion.descripcion ?: "Sin descripción",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = AppColors.NeutralText,
+                        )
+                    }
+                    StatusChip(suscripcion.estado_suscripcion)
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Text("Inicio: ${suscripcion.fecha_inicio}")
+                Text("Término: ${suscripcion.fecha_fin ?: "Sin término"}")
+                Text("Renovación automática: ${if (suscripcion.renovacion_automatica) "Sí" else "No"}")
+                Text("Precio mensual: $${suscripcion.precio_mensual}")
+                Text("Límite de usuarios: ${suscripcion.limite_usuarios}")
+            }
+        }
+    }
+}
+
+@Composable
+private fun ServiciosSection(servicios: List<UsuarioServicioData>) {
+    Text(
+        text = "Servicios adicionales",
+        style = MaterialTheme.typography.titleMedium,
+        color = AppColors.PrimaryDark,
+        fontWeight = FontWeight.Bold,
+    )
+    Spacer(modifier = Modifier.height(8.dp))
+
+    if (servicios.isEmpty()) {
+        EmptyDataCard("No tienes servicios adicionales contratados")
+        return
+    }
+
+    servicios.forEach { servicio ->
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 8.dp),
+            shape = RoundedCornerShape(14.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+        ) {
+            Column(modifier = Modifier.padding(14.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = servicio.nombre_servicio,
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = AppColors.PrimaryDark,
+                        )
+                        Text(
+                            text = servicio.descripcion ?: "Sin descripción",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = AppColors.NeutralText,
+                        )
+                    }
+                    StatusChip(servicio.estado)
+                }
+                Spacer(modifier = Modifier.height(6.dp))
+                Text("Costo mensual: $${servicio.costo_mensual}")
+                Text("Precio pactado: $${servicio.precio_pactado}")
+                Text("Contratación: ${servicio.fecha_contratacion}")
+                Text("Término: ${servicio.fecha_termino ?: "Sin término"}")
+            }
+        }
+    }
+}
+
+@Composable
+private fun EmptyDataCard(message: String) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        color = Color(0xFFF2F3FA),
+    ) {
         Text(
-            text = value,
-            style = MaterialTheme.typography.bodyLarge,
-            color = AppColors.PrimaryDark,
-            fontWeight = FontWeight.Medium,
+            text = message,
+            modifier = Modifier.padding(14.dp),
+            color = AppColors.NeutralText,
         )
     }
+}
+
+@Composable
+private fun StatusChip(status: String) {
+    val cleanStatus = status.uppercase()
+    val (background, textColor) = when (cleanStatus) {
+        "ACTIVA", "ACTIVO", "PAGADA" -> Color(0xFFDFF5E5) to Color(0xFF19713E)
+        "VENCIDA", "SUSPENDIDA", "SUSPENDIDO" -> Color(0xFFFFF4D8) to Color(0xFF7D5B00)
+        "CANCELADA", "ANULADA", "RECHAZADO" -> Color(0xFFFDE1DE) to Color(0xFF8C1D18)
+        else -> Color(0xFFEAEAF0) to Color(0xFF4E5270)
+    }
+
+    Text(
+        text = cleanStatus,
+        modifier = Modifier
+            .background(background, RoundedCornerShape(10.dp))
+            .padding(horizontal = 10.dp, vertical = 5.dp),
+        color = textColor,
+        style = MaterialTheme.typography.labelSmall,
+        fontWeight = FontWeight.SemiBold,
+    )
 }

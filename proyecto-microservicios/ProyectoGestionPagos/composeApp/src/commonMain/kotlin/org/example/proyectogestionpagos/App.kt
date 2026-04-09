@@ -9,7 +9,9 @@ import org.example.proyectogestionpagos.data.session.SessionManager
 import org.example.proyectogestionpagos.navigation.AppDestination
 import org.example.proyectogestionpagos.navigation.rememberAppNavigator
 import org.example.proyectogestionpagos.ui.screens.HomeScreen
+import org.example.proyectogestionpagos.ui.screens.InvoiceDetailScreen
 import org.example.proyectogestionpagos.ui.screens.LoginScreen
+import org.example.proyectogestionpagos.ui.screens.PaymentScreen
 import org.example.proyectogestionpagos.ui.screens.ProfileScreen
 
 @Composable
@@ -32,6 +34,8 @@ fun App() {
                         navigator.navigateTo(AppDestination.Login)
                     },
                     onProfileClick = { navigator.navigateTo(AppDestination.Profile) },
+                    onOpenInvoiceDetail = { navigator.navigateTo(AppDestination.InvoiceDetail) },
+                    onGoToPayment = { navigator.navigateTo(AppDestination.Payment) },
                 )
 
                 AppDestination.Profile -> ProfileScreen(
@@ -40,6 +44,15 @@ fun App() {
                         SessionManager.clearSession()
                         navigator.navigateTo(AppDestination.Login)
                     },
+                )
+
+                AppDestination.InvoiceDetail -> InvoiceDetailScreen(
+                    onBack = { navigator.navigateTo(AppDestination.Home) },
+                    onGoToPayment = { navigator.navigateTo(AppDestination.Payment) },
+                )
+
+                AppDestination.Payment -> PaymentScreen(
+                    onBack = { navigator.navigateTo(AppDestination.Home) },
                 )
             }
         }

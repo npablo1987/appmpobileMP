@@ -10,12 +10,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Logout
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -29,8 +23,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import org.example.proyectogestionpagos.generated.resources.Res
+import org.example.proyectogestionpagos.generated.resources.ic_arrow_back
+import org.example.proyectogestionpagos.generated.resources.ic_logout
+import org.example.proyectogestionpagos.generated.resources.ic_person
+import org.example.proyectogestionpagos.generated.resources.ic_star
+import org.example.proyectogestionpagos.generated.resources.ic_verified
 import org.example.proyectogestionpagos.ui.components.AppBottomBar
 import org.example.proyectogestionpagos.ui.theme.AppColors
+import org.jetbrains.compose.resources.DrawableResource
+import org.jetbrains.compose.resources.painterResource
 
 @Composable
 fun ProfileScreen(
@@ -46,7 +48,7 @@ fun ProfileScreen(
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
-                imageVector = Icons.Filled.Person,
+                painter = painterResource(Res.drawable.ic_person),
                 contentDescription = "Perfil",
                 tint = AppColors.PrimaryDark,
             )
@@ -65,10 +67,10 @@ fun ProfileScreen(
             modifier = Modifier.fillMaxWidth(),
         ) {
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                ProfileItem(icon = Icons.Filled.Person, label = "Nombre", value = "Leah White")
-                ProfileItem(icon = Icons.Filled.Verified, label = "Rol", value = "UX Designer")
-                ProfileItem(icon = Icons.Filled.Star, label = "Plan actual", value = "Pro")
-                ProfileItem(icon = Icons.Filled.Verified, label = "Estado", value = "Activo")
+                ProfileItem(icon = Res.drawable.ic_person, label = "Nombre", value = "Leah White")
+                ProfileItem(icon = Res.drawable.ic_verified, label = "Rol", value = "UX Designer")
+                ProfileItem(icon = Res.drawable.ic_star, label = "Plan actual", value = "Pro")
+                ProfileItem(icon = Res.drawable.ic_verified, label = "Estado", value = "Activo")
             }
         }
 
@@ -88,7 +90,7 @@ fun ProfileScreen(
             colors = ButtonDefaults.buttonColors(containerColor = AppColors.Primary),
         ) {
             Icon(
-                imageVector = Icons.Filled.ArrowBack,
+                painter = painterResource(Res.drawable.ic_arrow_back),
                 contentDescription = "Volver al inicio",
                 modifier = Modifier.padding(end = 8.dp),
             )
@@ -102,7 +104,7 @@ fun ProfileScreen(
             colors = ButtonDefaults.buttonColors(containerColor = AppColors.PrimaryDark),
         ) {
             Icon(
-                imageVector = Icons.Filled.Logout,
+                painter = painterResource(Res.drawable.ic_logout),
                 contentDescription = "Cerrar sesión",
                 modifier = Modifier.padding(end = 8.dp),
             )
@@ -113,13 +115,13 @@ fun ProfileScreen(
 
 @Composable
 private fun ProfileItem(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: DrawableResource,
     label: String,
     value: String,
 ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Icon(
-            imageVector = icon,
+            painter = painterResource(icon),
             contentDescription = label,
             tint = Color(0xFF5F678B),
         )

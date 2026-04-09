@@ -11,12 +11,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Login
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -44,7 +38,14 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
 import org.example.proyectogestionpagos.data.network.AuthApiService
 import org.example.proyectogestionpagos.data.session.SessionManager
+import org.example.proyectogestionpagos.generated.resources.Res
+import org.example.proyectogestionpagos.generated.resources.ic_email
+import org.example.proyectogestionpagos.generated.resources.ic_lock
+import org.example.proyectogestionpagos.generated.resources.ic_login
+import org.example.proyectogestionpagos.generated.resources.ic_visibility
+import org.example.proyectogestionpagos.generated.resources.ic_visibility_off
 import org.example.proyectogestionpagos.ui.theme.AppColors
+import org.jetbrains.compose.resources.painterResource
 
 @Composable
 fun LoginScreen(onLoginSuccess: () -> Unit) {
@@ -102,7 +103,7 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
             placeholder = { Text("example@email.com") },
             singleLine = true,
             leadingIcon = {
-                Icon(imageVector = Icons.Filled.Email, contentDescription = "Correo")
+                Icon(painter = painterResource(Res.drawable.ic_email), contentDescription = "Correo")
             },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
             enabled = !isLoading,
@@ -119,12 +120,12 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
             placeholder = { Text("Tu contraseña") },
             singleLine = true,
             leadingIcon = {
-                Icon(imageVector = Icons.Filled.Lock, contentDescription = "Clave")
+                Icon(painter = painterResource(Res.drawable.ic_lock), contentDescription = "Clave")
             },
             trailingIcon = {
                 IconButton(onClick = { showPassword = !showPassword }) {
                     Icon(
-                        imageVector = if (showPassword) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
+                        painter = painterResource(if (showPassword) Res.drawable.ic_visibility_off else Res.drawable.ic_visibility),
                         contentDescription = if (showPassword) "Ocultar clave" else "Mostrar clave",
                     )
                 }
@@ -191,7 +192,7 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
                 )
             } else {
                 Icon(
-                    imageVector = Icons.Filled.Login,
+                    painter = painterResource(Res.drawable.ic_login),
                     contentDescription = "Iniciar sesión",
                     modifier = Modifier.padding(end = 8.dp),
                 )

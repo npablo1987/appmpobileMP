@@ -38,12 +38,12 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
 import org.example.proyectogestionpagos.data.network.AuthApiService
 import org.example.proyectogestionpagos.data.session.SessionManager
-import org.example.proyectogestionpagos.generated.resources.Res
-import org.example.proyectogestionpagos.generated.resources.ic_email
-import org.example.proyectogestionpagos.generated.resources.ic_lock
-import org.example.proyectogestionpagos.generated.resources.ic_login
-import org.example.proyectogestionpagos.generated.resources.ic_visibility
-import org.example.proyectogestionpagos.generated.resources.ic_visibility_off
+import proyectogestionpagos.composeapp.generated.resources.Res
+import proyectogestionpagos.composeapp.generated.resources.ic_email
+import proyectogestionpagos.composeapp.generated.resources.ic_lock
+import proyectogestionpagos.composeapp.generated.resources.ic_login
+import proyectogestionpagos.composeapp.generated.resources.ic_visibility
+import proyectogestionpagos.composeapp.generated.resources.ic_visibility_off
 import org.example.proyectogestionpagos.ui.theme.AppColors
 import org.jetbrains.compose.resources.painterResource
 

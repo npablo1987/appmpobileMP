@@ -22,9 +22,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import org.example.proyectogestionpagos.generated.resources.Res
-import org.example.proyectogestionpagos.generated.resources.ic_book
-import org.example.proyectogestionpagos.generated.resources.ic_expand_more
+import proyectogestionpagos.composeapp.generated.resources.Res
+import proyectogestionpagos.composeapp.generated.resources.ic_book
+import proyectogestionpagos.composeapp.generated.resources.ic_expand_more
 import org.jetbrains.compose.resources.painterResource
 
 @Composable

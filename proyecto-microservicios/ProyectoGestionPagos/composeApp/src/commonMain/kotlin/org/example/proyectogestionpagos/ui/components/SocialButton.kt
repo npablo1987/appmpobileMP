@@ -11,10 +11,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import org.example.proyectogestionpagos.generated.resources.Res
-import org.example.proyectogestionpagos.generated.resources.ic_alternate_email
-import org.example.proyectogestionpagos.generated.resources.ic_mail
-import org.example.proyectogestionpagos.generated.resources.ic_share
+import proyectogestionpagos.composeapp.generated.resources.Res
+import proyectogestionpagos.composeapp.generated.resources.ic_alternate_email
+import proyectogestionpagos.composeapp.generated.resources.ic_mail
+import proyectogestionpagos.composeapp.generated.resources.ic_share
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.painterResource
 

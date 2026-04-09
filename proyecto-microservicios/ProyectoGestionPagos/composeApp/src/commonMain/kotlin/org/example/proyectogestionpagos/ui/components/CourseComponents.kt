@@ -12,6 +12,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Book
+import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -32,7 +36,11 @@ fun CategoryItem(label: String, background: Color) {
                 .background(background),
             contentAlignment = Alignment.Center,
         ) {
-            Text("◼", color = Color.White)
+            Icon(
+                imageVector = Icons.Filled.Book,
+                contentDescription = label,
+                tint = Color.White,
+            )
         }
         Spacer(modifier = Modifier.height(6.dp))
         Text(label, color = Color(0xFF575D77), style = MaterialTheme.typography.bodySmall)
@@ -84,6 +92,10 @@ fun CourseStatusRow(title: String, counter: String) {
             Text(counter, color = Color(0xFF51587A), style = MaterialTheme.typography.bodySmall)
         }
         Spacer(modifier = Modifier.width(8.dp))
-        Text("⌄", color = Color(0xFF51587A))
+        Icon(
+            imageVector = Icons.Filled.ExpandMore,
+            contentDescription = "Expandir",
+            tint = Color(0xFF51587A),
+        )
     }
 }

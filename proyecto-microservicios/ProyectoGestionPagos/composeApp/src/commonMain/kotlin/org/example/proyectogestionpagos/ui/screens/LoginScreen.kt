@@ -11,10 +11,18 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Login
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -30,6 +38,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
@@ -43,6 +52,7 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
     var password by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    var showPassword by remember { mutableStateOf(false) }
 
     val coroutineScope = rememberCoroutineScope()
     val authApiService = remember { AuthApiService() }
@@ -91,6 +101,9 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
             label = { Text("Correo") },
             placeholder = { Text("example@email.com") },
             singleLine = true,
+            leadingIcon = {
+                Icon(imageVector = Icons.Filled.Email, contentDescription = "Correo")
+            },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
             enabled = !isLoading,
             modifier = Modifier.fillMaxWidth(),
@@ -105,7 +118,18 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
             label = { Text("Clave") },
             placeholder = { Text("Tu contraseña") },
             singleLine = true,
-            visualTransformation = PasswordVisualTransformation(),
+            leadingIcon = {
+                Icon(imageVector = Icons.Filled.Lock, contentDescription = "Clave")
+            },
+            trailingIcon = {
+                IconButton(onClick = { showPassword = !showPassword }) {
+                    Icon(
+                        imageVector = if (showPassword) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
+                        contentDescription = if (showPassword) "Ocultar clave" else "Mostrar clave",
+                    )
+                }
+            },
+            visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
             enabled = !isLoading,
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(10.dp),
@@ -166,6 +190,11 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
                     modifier = Modifier.height(22.dp),
                 )
             } else {
+                Icon(
+                    imageVector = Icons.Filled.Login,
+                    contentDescription = "Iniciar sesión",
+                    modifier = Modifier.padding(end = 8.dp),
+                )
                 Text("Iniciar sesión", fontSize = 18.sp)
             }
         }

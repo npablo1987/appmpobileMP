@@ -1,3 +1,4 @@
+import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.routers import (
@@ -8,7 +9,14 @@ from app.routers import (
     suscripciones_router,
     usuarios_servicios_router,
     facturas_router,
-    detalle_factura_router
+    detalle_factura_router,
+    auth_router
+)
+
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s - %(message)s"
 )
 
 app = FastAPI(
@@ -37,3 +45,4 @@ app.include_router(suscripciones_router)
 app.include_router(usuarios_servicios_router)
 app.include_router(facturas_router)
 app.include_router(detalle_factura_router)
+app.include_router(auth_router)

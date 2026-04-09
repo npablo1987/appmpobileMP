@@ -1,11 +1,7 @@
 package org.example.proyectogestionpagos.ui.screens
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -15,18 +11,20 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -34,47 +32,67 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import org.example.proyectogestionpagos.ui.components.SocialButton
+import kotlinx.coroutines.launch
+import org.example.proyectogestionpagos.data.network.AuthApiService
+import org.example.proyectogestionpagos.data.session.SessionManager
 import org.example.proyectogestionpagos.ui.theme.AppColors
 
 @Composable
 fun LoginScreen(onLoginSuccess: () -> Unit) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
-    var rememberMe by remember { mutableStateOf(true) }
+    var isLoading by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+
+    val coroutineScope = rememberCoroutineScope()
+    val authApiService = remember { AuthApiService() }
+
+    fun validateInput(): String? {
+        println("[LoginScreen] Iniciando validación de credenciales")
+        val sanitizedEmail = email.trim()
+        val sanitizedPassword = password.trim()
+
+        if (sanitizedEmail.isEmpty()) return "Debe ingresar su correo"
+        if (sanitizedPassword.isEmpty()) return "Debe ingresar su clave"
+
+        val emailRegex = Regex("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$")
+        if (!emailRegex.matches(sanitizedEmail)) return "Correo con formato inválido"
+
+        println("[LoginScreen] Validación local exitosa")
+        return null
+    }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 24.dp, vertical = 28.dp),
+        verticalArrangement = Arrangement.Center,
     ) {
-        Spacer(modifier = Modifier.height(34.dp))
-
         Text(
-            text = "Login to your\naccount.",
+            text = "Iniciar sesión",
             style = MaterialTheme.typography.headlineLarge,
             fontWeight = FontWeight.Bold,
             color = AppColors.PrimaryDark,
-            lineHeight = 44.sp,
         )
 
         Spacer(modifier = Modifier.height(12.dp))
         Text(
-            text = "Hola, bienvenido de nuevo",
+            text = "Ingresa tus credenciales para continuar",
             color = Color(0xFF9AA0AF),
             style = MaterialTheme.typography.bodyMedium,
         )
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
         OutlinedTextField(
             value = email,
             onValueChange = { email = it },
-            label = { Text("E-mail") },
+            label = { Text("Correo") },
             placeholder = { Text("example@email.com") },
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+            enabled = !isLoading,
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(10.dp),
         )
@@ -84,84 +102,85 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
         OutlinedTextField(
             value = password,
             onValueChange = { password = it },
-            label = { Text("Password") },
+            label = { Text("Clave") },
             placeholder = { Text("Tu contraseña") },
             singleLine = true,
             visualTransformation = PasswordVisualTransformation(),
+            enabled = !isLoading,
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(10.dp),
         )
 
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Checkbox(checked = rememberMe, onCheckedChange = { rememberMe = it })
-                Text(
-                    text = "Recordarme",
-                    color = AppColors.NeutralText,
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            }
-
-            Text(
-                text = "¿Olvidaste tu contraseña?",
-                color = AppColors.NeutralText,
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.clickable { },
-            )
-        }
-
-        Spacer(modifier = Modifier.height(18.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
         Button(
-            onClick = onLoginSuccess,
+            onClick = {
+                if (isLoading) return@Button
+
+                val validationError = validateInput()
+                if (validationError != null) {
+                    errorMessage = validationError
+                    println("[LoginScreen] Error validación local: $validationError")
+                    return@Button
+                }
+
+                coroutineScope.launch {
+                    isLoading = true
+                    try {
+                        println("[LoginScreen] Llamando endpoint /auth/login")
+                        val response = authApiService.login(
+                            correo = email.trim(),
+                            clave = password.trim(),
+                        )
+
+                        if (response.success && response.data != null) {
+                            SessionManager.saveSession(response.data)
+                            println("[LoginScreen] Login exitoso, navegando a Home")
+                            onLoginSuccess()
+                        } else {
+                            println("[LoginScreen] Error de autenticación: ${response.message}")
+                            errorMessage = response.message
+                        }
+                    } catch (exception: Exception) {
+                        println("[LoginScreen] Error de conexión con servidor: ${exception.message}")
+                        errorMessage = "No fue posible conectar con el servidor"
+                    } finally {
+                        isLoading = false
+                    }
+                }
+            },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(52.dp),
             shape = RoundedCornerShape(10.dp),
+            enabled = !isLoading,
             colors = ButtonDefaults.buttonColors(
                 containerColor = AppColors.Primary,
                 contentColor = Color.White,
             ),
         ) {
-            Text("Entrar", fontSize = 18.sp)
+            if (isLoading) {
+                CircularProgressIndicator(
+                    color = Color.White,
+                    strokeWidth = 2.dp,
+                    modifier = Modifier.height(22.dp),
+                )
+            } else {
+                Text("Iniciar sesión", fontSize = 18.sp)
+            }
         }
+    }
 
-        Spacer(modifier = Modifier.height(34.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .height(1.dp)
-                    .background(Color(0xFFE2E4EA)),
-            )
-            Text("  o continúa con  ", color = Color(0xFF9AA0AF), style = MaterialTheme.typography.bodySmall)
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .height(1.dp)
-                    .background(Color(0xFFE2E4EA)),
-            )
-        }
-
-        Spacer(modifier = Modifier.height(20.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            SocialButton("f", Color(0xFF1877F2), Modifier.weight(1f))
-            SocialButton("G", Color(0xFFDB4437), Modifier.weight(1f))
-            SocialButton("", Color(0xFF141414), Modifier.weight(1f))
-        }
+    if (errorMessage != null) {
+        AlertDialog(
+            onDismissRequest = { errorMessage = null },
+            title = { Text("Atención") },
+            text = { Text(errorMessage ?: "") },
+            confirmButton = {
+                TextButton(onClick = { errorMessage = null }) {
+                    Text("Aceptar")
+                }
+            },
+        )
     }
 }

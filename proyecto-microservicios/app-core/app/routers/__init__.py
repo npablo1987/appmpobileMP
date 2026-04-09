@@ -6,6 +6,7 @@ from .suscripciones import router as suscripciones_router
 from .usuarios_servicios import router as usuarios_servicios_router
 from .facturas import router as facturas_router
 from .detalle_factura import router as detalle_factura_router
+from .auth import router as auth_router
 
 __all__ = [
     "usuarios_router",
@@ -15,5 +16,6 @@ __all__ = [
     "suscripciones_router",
     "usuarios_servicios_router",
     "facturas_router",
-    "detalle_factura_router"
+    "detalle_factura_router",
+    "auth_router"
 ]

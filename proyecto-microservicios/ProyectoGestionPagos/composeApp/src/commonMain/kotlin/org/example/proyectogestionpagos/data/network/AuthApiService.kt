@@ -7,6 +7,8 @@ import io.ktor.client.plugins.ResponseException
 import io.ktor.client.request.get
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
+import io.ktor.http.contentType
+import io.ktor.http.ContentType
 import org.example.proyectogestionpagos.getApiBaseUrl
 import org.example.proyectogestionpagos.data.model.HomeResponse
 import org.example.proyectogestionpagos.data.model.LoginRequest
@@ -20,6 +22,7 @@ class AuthApiService {
         println("[AuthApiService] Consumiendo endpoint /auth/login")
         return try {
             val response = client.post("$baseUrl/auth/login") {
+                contentType(ContentType.Application.Json)
                 setBody(LoginRequest(correo = correo.trim(), clave = clave.trim()))
             }
             response.body()

@@ -12,16 +12,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Badge
-import androidx.compose.material.icons.filled.CalendarMonth
-import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.LocationCity
-import androidx.compose.material.icons.filled.Logout
-import androidx.compose.material.icons.filled.Phone
-import androidx.compose.material.icons.filled.PinDrop
-import androidx.compose.material.icons.filled.VerifiedUser
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -40,14 +30,25 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import org.example.proyectogestionpagos.data.model.HomeUserData
 import org.example.proyectogestionpagos.data.network.AuthApiService
 import org.example.proyectogestionpagos.data.session.SessionManager
+import org.example.proyectogestionpagos.generated.resources.Res
+import org.example.proyectogestionpagos.generated.resources.ic_badge
+import org.example.proyectogestionpagos.generated.resources.ic_calendar_month
+import org.example.proyectogestionpagos.generated.resources.ic_email
+import org.example.proyectogestionpagos.generated.resources.ic_home
+import org.example.proyectogestionpagos.generated.resources.ic_location_city
+import org.example.proyectogestionpagos.generated.resources.ic_logout
+import org.example.proyectogestionpagos.generated.resources.ic_phone
+import org.example.proyectogestionpagos.generated.resources.ic_pin_drop
+import org.example.proyectogestionpagos.generated.resources.ic_verified_user
 import org.example.proyectogestionpagos.ui.components.AppBottomBar
 import org.example.proyectogestionpagos.ui.theme.AppColors
+import org.jetbrains.compose.resources.DrawableResource
+import org.jetbrains.compose.resources.painterResource
 
 @Composable
 fun HomeScreen(
@@ -90,7 +91,7 @@ fun HomeScreen(
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
-                imageVector = Icons.Filled.Home,
+                painter = painterResource(Res.drawable.ic_home),
                 contentDescription = "Inicio",
                 tint = AppColors.PrimaryDark,
             )
@@ -130,17 +131,17 @@ fun HomeScreen(
                     tonalElevation = 2.dp,
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        InfoRow(Icons.Filled.Badge, "Nombre", homeUserData?.nombre_completo ?: "-")
-                        InfoRow(Icons.Filled.Email, "Correo", homeUserData?.correo ?: "-")
-                        InfoRow(Icons.Filled.Phone, "Teléfono", homeUserData?.telefono ?: "-")
-                        InfoRow(Icons.Filled.LocationCity, "Ciudad", homeUserData?.ciudad ?: "-")
-                        InfoRow(Icons.Filled.PinDrop, "Dirección", homeUserData?.direccion ?: "-")
-                        InfoRow(Icons.Filled.CalendarMonth, "Fecha registro", homeUserData?.fecha_registro ?: "-")
+                        InfoRow(Res.drawable.ic_badge, "Nombre", homeUserData?.nombre_completo ?: "-")
+                        InfoRow(Res.drawable.ic_email, "Correo", homeUserData?.correo ?: "-")
+                        InfoRow(Res.drawable.ic_phone, "Teléfono", homeUserData?.telefono ?: "-")
+                        InfoRow(Res.drawable.ic_location_city, "Ciudad", homeUserData?.ciudad ?: "-")
+                        InfoRow(Res.drawable.ic_pin_drop, "Dirección", homeUserData?.direccion ?: "-")
+                        InfoRow(Res.drawable.ic_calendar_month, "Fecha registro", homeUserData?.fecha_registro ?: "-")
 
                         Spacer(modifier = Modifier.height(10.dp))
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
-                                imageVector = Icons.Filled.VerifiedUser,
+                                painter = painterResource(Res.drawable.ic_verified_user),
                                 contentDescription = "Estado de cuenta",
                                 tint = Color(0xFF7A8198),
                             )
@@ -193,7 +194,7 @@ fun HomeScreen(
             colors = ButtonDefaults.buttonColors(containerColor = AppColors.PrimaryDark),
         ) {
             Icon(
-                imageVector = Icons.Filled.Logout,
+                painter = painterResource(Res.drawable.ic_logout),
                 contentDescription = "Cerrar sesión",
                 modifier = Modifier.padding(end = 8.dp),
             )
@@ -223,11 +224,11 @@ fun HomeScreen(
 }
 
 @Composable
-private fun InfoRow(icon: ImageVector, label: String, value: String) {
+private fun InfoRow(icon: DrawableResource, label: String, value: String) {
     Column(modifier = Modifier.padding(bottom = 10.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
-                imageVector = icon,
+                painter = painterResource(icon),
                 contentDescription = label,
                 tint = Color(0xFF7A8198),
             )

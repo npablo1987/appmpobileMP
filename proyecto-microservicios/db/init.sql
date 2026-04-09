@@ -254,81 +254,157 @@ CREATE INDEX idx_notificacion_usuario ON notificacion(id_usuario);
 -- DATOS INICIALES
 -- ============================================
 
--- Métodos de pago
-INSERT INTO metodo_pago (nombre_metodo, descripcion) VALUES
-('TARJETA', 'Pago con tarjeta de crédito o débito'),
-('TRANSFERENCIA', 'Pago por transferencia bancaria'),
-('EFECTIVO', 'Pago presencial en efectivo');
+-- Métodos de pago (20 registros)
+INSERT INTO metodo_pago (nombre_metodo, descripcion, activo)
+VALUES
+('TARJETA', 'Pago con tarjeta de crédito o débito', TRUE),
+('TRANSFERENCIA', 'Pago por transferencia bancaria', TRUE),
+('EFECTIVO', 'Pago presencial en efectivo', TRUE)
+ON CONFLICT (nombre_metodo) DO NOTHING;
 
--- Planes mensuales
-INSERT INTO plan_mensual (nombre_plan, descripcion, precio_mensual, limite_usuarios) VALUES
-('BÁSICO', 'Plan básico mensual', 9990, 1),
-('ESTÁNDAR', 'Plan estándar mensual', 19990, 3),
-('PREMIUM', 'Plan premium mensual', 29990, 10);
+INSERT INTO metodo_pago (nombre_metodo, descripcion, activo)
+SELECT
+    CONCAT('METODO_', LPAD(gs::text, 2, '0')),
+    CONCAT('Método de pago simulado #', gs),
+    TRUE
+FROM generate_series(4, 20) AS gs;
 
--- Servicios contratables
-INSERT INTO servicio (nombre_servicio, descripcion, costo_mensual) VALUES
-('Soporte Técnico', 'Asistencia técnica mensual', 4990),
-('Respaldo en la nube', 'Backup mensual de información', 6990),
-('Reportes avanzados', 'Módulo de reportes y estadísticas', 8990),
-('Integración API', 'Acceso e integración a API externa', 12990);
+-- Planes mensuales (20 registros)
+INSERT INTO plan_mensual (nombre_plan, descripcion, precio_mensual, limite_usuarios, activo)
+SELECT
+    CONCAT('PLAN_', LPAD(gs::text, 2, '0')),
+    CONCAT('Plan mensual simulado #', gs),
+    (7990 + (gs * 1500))::NUMERIC(12,2),
+    ((gs - 1) % 10) + 1,
+    TRUE
+FROM generate_series(1, 20) AS gs;
 
--- Usuario ejemplo
+-- Servicios contratables (20 registros)
+INSERT INTO servicio (nombre_servicio, descripcion, costo_mensual, activo)
+SELECT
+    CONCAT('SERVICIO_', LPAD(gs::text, 2, '0')),
+    CONCAT('Servicio adicional simulado #', gs),
+    (2990 + (gs * 500))::NUMERIC(12,2),
+    TRUE
+FROM generate_series(1, 20) AS gs;
+
+-- Usuarios (20 registros)
 INSERT INTO usuario (
     rut, nombres, apellido_paterno, apellido_materno, correo,
     telefono, direccion, ciudad, clave_hash, observacion
-) VALUES (
-    '16.650.344-2',
+)
+VALUES (
+    '16650344-2',
     'Pablo',
     'Vilches',
     'Valenzuela',
-    'pablo@correo.cl',
-    '+56912345678',
-    'Calle Principal 123',
+    'kyovilches@gmail.com',
+    '+56911112222',
+    'Pasaje Demo 123',
     'Santiago',
-    'hash_seguro_aqui',
-    'Usuario creado como ejemplo'
+    '1234',
+    'Usuario solicitado para ambiente local'
 );
 
--- Suscripción ejemplo
+INSERT INTO usuario (
+    rut, nombres, apellido_paterno, apellido_materno, correo,
+    telefono, direccion, ciudad, clave_hash, observacion
+)
+SELECT
+    CONCAT(20000000 + gs, '-', ((gs % 9) + 1)),
+    CONCAT('Usuario', gs),
+    CONCAT('ApellidoP', gs),
+    CONCAT('ApellidoM', gs),
+    CONCAT('usuario', gs, '@fake.local'),
+    CONCAT('+5699', LPAD((100000 + gs)::text, 6, '0')),
+    CONCAT('Calle Falsa ', gs),
+    CASE WHEN gs % 3 = 0 THEN 'Valparaíso' WHEN gs % 3 = 1 THEN 'Concepción' ELSE 'Santiago' END,
+    '1234',
+    'Usuario fake autogenerado para pruebas locales'
+FROM generate_series(2, 20) AS gs;
+
+-- Suscripciones (20 registros)
 INSERT INTO suscripcion (
     id_usuario, id_plan, fecha_inicio, fecha_fin, estado_suscripcion, renovacion_automatica
-) VALUES (
-    1, 2, CURRENT_DATE, CURRENT_DATE + INTERVAL '30 days', 'ACTIVA', TRUE
-);
+)
+SELECT
+    gs,
+    ((gs - 1) % 20) + 1,
+    CURRENT_DATE - ((gs % 5) * INTERVAL '15 days'),
+    CURRENT_DATE + (((gs % 4) + 1) * INTERVAL '30 days'),
+    'ACTIVA',
+    (gs % 2 = 0)
+FROM generate_series(1, 20) AS gs;
 
--- Servicios contratados ejemplo
+-- Servicios contratados por usuario (20 registros)
 INSERT INTO usuario_servicio (
-    id_usuario, id_servicio, fecha_contratacion, estado, precio_pactado
-) VALUES
-(1, 1, CURRENT_DATE, 'ACTIVO', 4990),
-(1, 2, CURRENT_DATE, 'ACTIVO', 6990);
+    id_usuario, id_servicio, fecha_contratacion, fecha_termino, estado, precio_pactado
+)
+SELECT
+    gs,
+    ((gs - 1) % 20) + 1,
+    CURRENT_DATE - ((gs % 8) * INTERVAL '10 days'),
+    NULL,
+    'ACTIVO',
+    (2990 + (((gs - 1) % 20) + 1) * 500)::NUMERIC(12,2)
+FROM generate_series(1, 20) AS gs;
 
--- Pago ejemplo
+-- Pagos (20 registros)
 INSERT INTO pago (
-    id_usuario, id_suscripcion, id_metodo_pago, periodo_anio, periodo_mes,
+    id_usuario, id_suscripcion, id_metodo_pago, fecha_pago, periodo_anio, periodo_mes,
     monto_total, estado_pago, codigo_transaccion, observacion
-) VALUES (
-    1, 1, 1,
-    EXTRACT(YEAR FROM CURRENT_DATE),
-    EXTRACT(MONTH FROM CURRENT_DATE),
-    31970,
-    'PAGADO',
-    'TRX-000001',
-    'Pago del plan estándar y servicios adicionales'
-);
+)
+SELECT
+    gs,
+    gs,
+    ((gs - 1) % 20) + 1,
+    CURRENT_TIMESTAMP - ((gs % 10) * INTERVAL '3 days'),
+    2026,
+    ((gs - 1) % 12) + 1,
+    (20000 + gs * 1750)::NUMERIC(12,2),
+    CASE WHEN gs % 5 = 0 THEN 'PENDIENTE' ELSE 'PAGADO' END,
+    CONCAT('TRX-', TO_CHAR(gs, 'FM000000')),
+    CONCAT('Pago fake autogenerado #', gs)
+FROM generate_series(1, 20) AS gs;
 
--- Factura ejemplo
+-- Facturas (20 registros)
 INSERT INTO factura (
     id_pago, numero_factura, fecha_emision, subtotal, impuesto, total, estado_factura
-) VALUES (
-    1, 'FAC-2026-0001', CURRENT_DATE, 31970, 0, 31970, 'PAGADA'
-);
+)
+SELECT
+    gs,
+    CONCAT('FAC-2026-', TO_CHAR(gs, 'FM0000')),
+    CURRENT_DATE - ((gs % 12) * INTERVAL '2 days'),
+    (20000 + gs * 1750)::NUMERIC(12,2),
+    0::NUMERIC(12,2),
+    (20000 + gs * 1750)::NUMERIC(12,2),
+    CASE WHEN gs % 6 = 0 THEN 'EMITIDA' ELSE 'PAGADA' END
+FROM generate_series(1, 20) AS gs;
 
--- Detalle factura ejemplo
+-- Detalles de factura (20 registros)
 INSERT INTO detalle_factura (
     id_factura, tipo_item, descripcion_item, cantidad, precio_unitario, subtotal_item
-) VALUES
-(1, 'PLAN', 'Plan ESTÁNDAR', 1, 19990, 19990),
-(1, 'SERVICIO', 'Soporte Técnico', 1, 4990, 4990),
-(1, 'SERVICIO', 'Respaldo en la nube', 1, 6990, 6990);
+)
+SELECT
+    gs,
+    CASE WHEN gs % 2 = 0 THEN 'SERVICIO' ELSE 'PLAN' END,
+    CONCAT('Detalle fake de factura #', gs),
+    1,
+    (20000 + gs * 1750)::NUMERIC(12,2),
+    (20000 + gs * 1750)::NUMERIC(12,2)
+FROM generate_series(1, 20) AS gs;
+
+-- Notificaciones (20 registros)
+INSERT INTO notificacion (
+    id_usuario, tipo_notificacion, destino, asunto, mensaje, estado_envio, fecha_envio, observacion
+)
+SELECT
+    gs,
+    CASE WHEN gs % 3 = 0 THEN 'SMS' WHEN gs % 3 = 1 THEN 'EMAIL' ELSE 'INTERNA' END,
+    CASE WHEN gs % 3 = 0 THEN CONCAT('+5697', LPAD((200000 + gs)::text, 6, '0')) ELSE CONCAT('usuario', gs, '@fake.local') END,
+    CONCAT('Notificación de prueba #', gs),
+    CONCAT('Mensaje fake generado automáticamente para usuario ', gs),
+    CASE WHEN gs % 7 = 0 THEN 'ERROR' WHEN gs % 2 = 0 THEN 'ENVIADA' ELSE 'PENDIENTE' END,
+    CURRENT_TIMESTAMP - ((gs % 15) * INTERVAL '4 hours'),
+    'Dato simulado inicial para entorno local'
+FROM generate_series(1, 20) AS gs;

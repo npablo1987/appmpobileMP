@@ -1,0 +1,132 @@
+package org.example.proyectogestionpagos.ui.components
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+
+@Composable
+fun SocialButton(symbol: String, tint: Color, modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier
+            .height(52.dp)
+            .border(1.dp, Color(0xFFE3E4EB), RoundedCornerShape(10.dp))
+            .clip(RoundedCornerShape(10.dp)),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = symbol,
+            color = tint,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+        )
+    }
+}
+
+@Composable
+fun CategoryItem(label: String, background: Color) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(
+            modifier = Modifier
+                .size(48.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(background),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text("◼", color = Color.White)
+        }
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(label, color = Color(0xFF575D77), style = MaterialTheme.typography.bodySmall)
+    }
+}
+
+@Composable
+fun InfoPill(
+    title: String,
+    subtitle: String,
+    background: Color,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(10.dp))
+            .background(background)
+            .padding(horizontal = 10.dp, vertical = 12.dp),
+    ) {
+        Text(title, color = Color.White, fontWeight = FontWeight.Bold)
+        Spacer(modifier = Modifier.height(2.dp))
+        Text(subtitle, color = Color.White.copy(alpha = 0.95f), style = MaterialTheme.typography.bodySmall)
+    }
+}
+
+@Composable
+fun CourseStatusRow(title: String, counter: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(Color(0xFFF0F1F6))
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = title,
+            color = Color(0xFF373D63),
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.weight(1f),
+        )
+        Box(
+            modifier = Modifier
+                .size(24.dp)
+                .clip(CircleShape)
+                .background(Color.White),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(counter, color = Color(0xFF51587A), style = MaterialTheme.typography.bodySmall)
+        }
+        Spacer(modifier = Modifier.width(8.dp))
+        Text("⌄", color = Color(0xFF51587A))
+    }
+}
+
+@Composable
+fun SearchBar(modifier: Modifier = Modifier) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .border(1.dp, Color(0xFFE3E5EB), RoundedCornerShape(10.dp))
+            .padding(horizontal = 14.dp, vertical = 10.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text("Search", color = Color(0xFFB2B6C2))
+        Box(
+            modifier = Modifier
+                .size(30.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(Color(0xFF6465F2)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text("⌕", color = Color.White)
+        }
+    }
+}

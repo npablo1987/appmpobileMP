@@ -9,12 +9,13 @@ import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
-import org.example.proyectogestionpagos.getPaymentsBaseUrl
+import org.example.proyectogestionpagos.data.model.CancelarPagoResponse
 import org.example.proyectogestionpagos.data.model.CrearPagoRequest
 import org.example.proyectogestionpagos.data.model.CrearPagoResponse
 import org.example.proyectogestionpagos.data.model.EstadoPagoResponse
 import org.example.proyectogestionpagos.data.model.PagoDirectoRequest
 import org.example.proyectogestionpagos.data.model.PagoDirectoResponse
+import org.example.proyectogestionpagos.getPaymentsBaseUrl
 
 class PaymentApiService {
     private val client = ApiClient.httpClient
@@ -44,13 +45,25 @@ class PaymentApiService {
     }
 
     suspend fun consultarEstado(idPago: Int): EstadoPagoResponse? {
-        println("[PaymentApiService] consultar estado id_pago=$idPago")
         return try {
             val response = client.get("$pagosBaseUrl/pagos/$idPago/estado")
             response.body()
         } catch (exception: Exception) {
             println("[PaymentApiService] error consultando estado: ${exception.message}")
             null
+        }
+    }
+
+    suspend fun cancelarPago(idPago: Int): CancelarPagoResponse {
+        return try {
+            val response = client.post("$pagosBaseUrl/pagos/$idPago/cancelar")
+            response.body()
+        } catch (exception: ClientRequestException) {
+            println("[PaymentApiService] error cancelando pago: ${exception.message}")
+            CancelarPagoResponse(success = false, message = "No fue posible cancelar el pago")
+        } catch (exception: Exception) {
+            println("[PaymentApiService] error de red cancelando pago: ${exception.message}")
+            CancelarPagoResponse(success = false, message = "No fue posible conectar con pagos")
         }
     }
 

@@ -31,6 +31,13 @@ data class EstadoPagoResponse(
 )
 
 @Serializable
+data class CancelarPagoResponse(
+    val success: Boolean,
+    val message: String,
+    val data: EstadoPagoResponse? = null,
+)
+
+@Serializable
 data class PagoDirectoRequest(
     val id_usuario: Int,
     val numero_tarjeta: String,

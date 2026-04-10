@@ -159,11 +159,6 @@ async def recibir_webhook(
     return WebhookAckResponse(success=True, message="Webhook procesado")
 
 
-@router.post("/", response_model=PagoResponse, status_code=status.HTTP_201_CREATED)
-def create_pago(pago: PagoCreate, db: Session = Depends(get_db)):
-    return crud_pago.create_pago(db=db, pago=pago)
-
-
 @router.get("/", response_model=List[PagoResponse])
 def read_pagos(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     return crud_pago.get_pagos(db, skip=skip, limit=limit)

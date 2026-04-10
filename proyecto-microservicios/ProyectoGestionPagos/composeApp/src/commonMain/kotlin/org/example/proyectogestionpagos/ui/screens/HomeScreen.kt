@@ -54,6 +54,7 @@ fun HomeScreen(
     onProfileClick: () -> Unit,
     onOpenInvoiceDetail: () -> Unit,
     onGoToPayment: () -> Unit,
+    onBack: () -> Unit = {},
 ) {
     val authApiService = remember { AuthApiService() }
     var isLoading by remember { mutableStateOf(true) }

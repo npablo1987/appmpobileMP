@@ -1,6 +1,8 @@
 import hashlib
 import logging
-from typing import Tuple
+from datetime import date, datetime
+from decimal import Decimal
+from typing import Any, Tuple
 
 from pydantic import EmailStr, TypeAdapter, ValidationError
 from sqlalchemy import text
@@ -13,6 +15,19 @@ logger = logging.getLogger(__name__)
 
 EMAIL_ADAPTER = TypeAdapter(EmailStr)
 ESTADOS_NO_ACTIVOS = {"SUSPENDIDA", "BLOQUEADA", "ELIMINADA"}
+
+
+def _serialize_dates(obj: Any) -> Any:
+    """Convierte objetos date, datetime y Decimal a tipos serializables."""
+    if isinstance(obj, (date, datetime)):
+        return obj.isoformat()
+    elif isinstance(obj, Decimal):
+        return float(obj)
+    elif isinstance(obj, dict):
+        return {k: _serialize_dates(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [_serialize_dates(item) for item in obj]
+    return obj
 
 
 def _normalizar_correo(correo: str) -> str:
@@ -259,15 +274,18 @@ def get_billing_overview(db: Session, id_usuario: int) -> Tuple[int, dict]:
             "con_factura": factura_data is not None,
         },
     )
+    
+    response_data = {
+        "id_usuario": id_usuario,
+        "estado_cuenta": db_usuario.estado_cuenta,
+        "suscripciones": suscripciones,
+        "servicios_adicionales": servicios,
+        "factura_actual": factura_data,
+        "detalle_factura": detalle_items,
+    }
+    
     return 200, {
         "success": True,
         "message": "Resumen de suscripciones obtenido correctamente",
-        "data": {
-            "id_usuario": id_usuario,
-            "estado_cuenta": db_usuario.estado_cuenta,
-            "suscripciones": suscripciones,
-            "servicios_adicionales": servicios,
-            "factura_actual": factura_data,
-            "detalle_factura": detalle_items,
-        },
+        "data": _serialize_dates(response_data),
     }

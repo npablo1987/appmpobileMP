@@ -29,3 +29,31 @@ data class EstadoPagoResponse(
     val id_pago: Int,
     val estado: String,
 )
+
+@Serializable
+data class PagoDirectoRequest(
+    val id_usuario: Int,
+    val numero_tarjeta: String,
+    val mes_vencimiento: Int,
+    val anio_vencimiento: Int,
+    val cvv: String,
+    val nombre_titular: String,
+    val email: String,
+    val descripcion: String,
+    val monto: Double,
+)
+
+@Serializable
+data class PagoDirectoResponse(
+    val success: Boolean,
+    val message: String,
+    val data: PagoDirectoData? = null,
+)
+
+@Serializable
+data class PagoDirectoData(
+    val id_pago: Int,
+    val estado: String,
+    val mp_payment_id: Long,
+    val external_reference: String,
+)

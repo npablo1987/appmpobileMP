@@ -30,55 +30,101 @@ router = APIRouter(prefix="/tarjetas", tags=["tarjetas"])
 
 @router.post("/guardar", response_model=TarjetaGuardarResponse, status_code=status.HTTP_201_CREATED)
 def guardar_tarjeta(payload: TarjetaGuardarRequest, db: Session = Depends(get_db)):
-    logger.info(f"[tarjetas] Guardando tarjeta id_usuario={payload.id_usuario}")
+    logger.info(f"\n\n{'='*80}")
+    logger.info(f"[tarjetas] 🔵 INICIO GUARDAR TARJETA - id_usuario={payload.id_usuario}")
+    logger.info(f"[tarjetas] Email: {payload.email}")
+    logger.info(f"[tarjetas] Token: {payload.token[:30]}..." if len(payload.token) > 30 else f"[tarjetas] Token: {payload.token}")
+    logger.info(f"{'='*80}\n")
 
     try:
-        mp_service = MercadoPagoService()
-    except ValueError as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        try:
+            logger.info(f"[tarjetas] 📌 Inicializando MercadoPagoService...")
+            mp_service = MercadoPagoService()
+            logger.info(f"[tarjetas] ✅ MercadoPagoService inicializado correctamente")
+        except ValueError as e:
+            logger.error(f"[tarjetas] ❌ Error inicializando MercadoPagoService: {e}")
+            raise HTTPException(status_code=500, detail=str(e))
 
-    db_customer = crud_customer.get_customer_by_usuario(db, payload.id_usuario)
-    
-    if not db_customer:
-        mp_customer = mp_service.create_customer(email=payload.email)
-        if not mp_customer:
-            raise HTTPException(status_code=502, detail="No fue posible crear customer en Mercado Pago")
+        logger.info(f"[tarjetas] 📌 Buscando customer en BD para id_usuario={payload.id_usuario}")
+        db_customer = crud_customer.get_customer_by_usuario(db, payload.id_usuario)
         
-        db_customer = crud_customer.create_customer(
+        if not db_customer:
+            logger.info(f"[tarjetas] ⚠️  Customer NO existe en BD, creando en Mercado Pago...")
+            mp_customer = mp_service.create_customer(email=payload.email)
+            if not mp_customer:
+                logger.error(f"[tarjetas] ❌ Error creando customer en Mercado Pago")
+                raise HTTPException(status_code=502, detail="No fue posible crear customer en Mercado Pago")
+            
+            logger.info(f"[tarjetas] 📌 Guardando customer en BD local: mp_customer_id={mp_customer['id']}")
+            db_customer = crud_customer.create_customer(
+                db=db,
+                id_usuario=payload.id_usuario,
+                mp_customer_id=mp_customer["id"],
+            )
+            logger.info(f"[tarjetas] ✅ Customer creado/recuperado: mp_customer_id={db_customer.mp_customer_id}")
+        else:
+            logger.info(f"[tarjetas] ✅ Customer ya existe en BD: mp_customer_id={db_customer.mp_customer_id}")
+
+        logger.info(f"[tarjetas] 📌 Procediendo a guardar tarjeta en Mercado Pago...")
+        logger.debug(f"[tarjetas] Token a usar: {payload.token[:20]}... (longitud={len(payload.token)})")
+        mp_card = mp_service.save_card(customer_id=db_customer.mp_customer_id, token=payload.token)
+        if not mp_card:
+            logger.error(f"[tarjetas] ❌ Error guardando tarjeta en Mercado Pago")
+            raise HTTPException(status_code=502, detail="No fue posible guardar tarjeta en Mercado Pago. Verifica que el token sea válido")
+
+        logger.info(f"[tarjetas] ✅ Tarjeta guardada en Mercado Pago correctamente")
+        logger.debug(f"[tarjetas] Respuesta MP completa: {mp_card}")
+
+        # Verificar si la tarjeta ya existe en BD (por mp_card_id)
+        mp_card_id = mp_card.get("id", "")
+        logger.info(f"[tarjetas] 📌 Verificando si tarjeta ya existe en BD: mp_card_id={mp_card_id}")
+        tarjeta_existente = crud_tarjeta.get_tarjeta_by_mp_card_id(db, mp_card_id) if mp_card_id else None
+        
+        if tarjeta_existente:
+            logger.info(f"[tarjetas] ⚠️  Tarjeta ya existe en BD: id={tarjeta_existente.id} mp_card_id={mp_card_id}")
+            return TarjetaGuardarResponse(
+                success=True,
+                message="Tarjeta ya estaba guardada",
+                data=TarjetaResponse.model_validate(tarjeta_existente),
+            )
+
+        logger.info(f"[tarjetas] 📌 Insertando tarjeta en BD...")
+        tarjetas_existentes = crud_tarjeta.get_tarjetas_by_usuario(db, payload.id_usuario)
+        is_first_card = len(tarjetas_existentes) == 0
+        logger.debug(f"[tarjetas] Tarjetas existentes para usuario: {len(tarjetas_existentes)}, es_primera={is_first_card}")
+
+        db_tarjeta = crud_tarjeta.create_tarjeta(
             db=db,
             id_usuario=payload.id_usuario,
-            mp_customer_id=mp_customer["id"],
+            mp_customer_id=db_customer.mp_customer_id,
+            mp_card_id=mp_card_id,
+            payment_method_id=mp_card.get("payment_method", {}).get("id", ""),
+            brand=mp_card.get("payment_method", {}).get("name", ""),
+            last_four_digits=mp_card.get("last_four_digits", ""),
+            expiration_month=mp_card.get("expiration_month", 0),
+            expiration_year=mp_card.get("expiration_year", 0),
+            holder_name=mp_card.get("cardholder", {}).get("name", ""),
+            is_default=is_first_card,
         )
-        logger.info(f"[tarjetas] Customer creado mp_customer_id={mp_customer['id']}")
 
-    mp_card = mp_service.save_card(customer_id=db_customer.mp_customer_id, token=payload.token)
-    if not mp_card:
-        raise HTTPException(status_code=502, detail="No fue posible guardar tarjeta en Mercado Pago")
+        logger.info(f"[tarjetas] ✅ Tarjeta guardada en BD: id={db_tarjeta.id}, mp_card_id={db_tarjeta.mp_card_id}")
+        logger.debug(f"[tarjetas] Detalles tarjeta guardada: brand={db_tarjeta.brand}, last_4={db_tarjeta.last_four_digits}")
 
-    tarjetas_existentes = crud_tarjeta.get_tarjetas_by_usuario(db, payload.id_usuario)
-    is_first_card = len(tarjetas_existentes) == 0
+        logger.info(f"{'='*80}")
+        logger.info(f"[tarjetas] 🟢 TARJETA GUARDADA EXITOSAMENTE")
+        logger.info(f"{'='*80}\n")
 
-    db_tarjeta = crud_tarjeta.create_tarjeta(
-        db=db,
-        id_usuario=payload.id_usuario,
-        mp_customer_id=db_customer.mp_customer_id,
-        mp_card_id=mp_card["id"],
-        payment_method_id=mp_card.get("payment_method", {}).get("id", ""),
-        brand=mp_card.get("payment_method", {}).get("name", ""),
-        last_four_digits=mp_card.get("last_four_digits", ""),
-        expiration_month=mp_card.get("expiration_month", 0),
-        expiration_year=mp_card.get("expiration_year", 0),
-        holder_name=mp_card.get("cardholder", {}).get("name", ""),
-        is_default=is_first_card,
-    )
 
-    logger.info(f"[tarjetas] Tarjeta guardada id={db_tarjeta.id} mp_card_id={db_tarjeta.mp_card_id}")
-
-    return TarjetaGuardarResponse(
-        success=True,
-        message="Tarjeta guardada correctamente",
-        data=TarjetaResponse.model_validate(db_tarjeta),
-    )
+        return TarjetaGuardarResponse(
+            success=True,
+            message="Tarjeta guardada correctamente",
+            data=TarjetaResponse.model_validate(db_tarjeta),
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"[tarjetas] Error inesperado guardando tarjeta: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
 
 
 @router.get("/usuario/{id_usuario}", response_model=TarjetasListResponse)

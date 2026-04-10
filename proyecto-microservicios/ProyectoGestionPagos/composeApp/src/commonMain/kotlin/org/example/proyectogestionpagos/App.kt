@@ -18,14 +18,12 @@ import org.example.proyectogestionpagos.navigation.AppDestination
 import org.example.proyectogestionpagos.navigation.rememberAppNavigator
 import org.example.proyectogestionpagos.ui.components.MenuTransitionScreen
 import org.example.proyectogestionpagos.ui.components.TopBanner
-import org.example.proyectogestionpagos.ui.screens.AddCardScreen
 import org.example.proyectogestionpagos.ui.screens.HomeScreen
 import org.example.proyectogestionpagos.ui.screens.InvoiceDetailScreen
 import org.example.proyectogestionpagos.ui.screens.LoginScreen
-import org.example.proyectogestionpagos.ui.screens.PayWithSavedCardScreen
 import org.example.proyectogestionpagos.ui.screens.PaymentScreen
+import org.example.proyectogestionpagos.ui.screens.PaymentDirectScreen
 import org.example.proyectogestionpagos.ui.screens.ProfileScreen
-import org.example.proyectogestionpagos.ui.screens.SavedCardsScreen
 
 @Composable
 fun App() {
@@ -69,8 +67,7 @@ fun App() {
                                 onProfileClick = { navigator.navigateTo(AppDestination.Profile) },
                                 onOpenInvoiceDetail = { navigator.navigateTo(AppDestination.InvoiceDetail) },
                                 onGoToPayment = { navigator.navigateTo(AppDestination.Payment) },
-                                onGoToSavedCards = { navigator.navigateTo(AppDestination.SavedCards) },
-                                onPayWithSavedCard = { navigator.navigateTo(AppDestination.PayWithSavedCard) },
+                                onGoToPaymentDirect = { navigator.navigateTo(AppDestination.PaymentDirect) },
                                 onBack = { navigator.navigateBack() },
                             )
 
@@ -91,18 +88,9 @@ fun App() {
                                 onBack = { navigator.navigateBack() },
                             )
 
-                            AppDestination.SavedCards -> SavedCardsScreen(
+                            AppDestination.PaymentDirect -> PaymentDirectScreen(
                                 onBack = { navigator.navigateBack() },
-                                onAddCard = { navigator.navigateTo(AppDestination.AddCard) },
-                            )
-
-                            AppDestination.AddCard -> AddCardScreen(
-                                onBack = { navigator.navigateBack() },
-                            )
-
-                            AppDestination.PayWithSavedCard -> PayWithSavedCardScreen(
-                                onBack = { navigator.navigateBack() },
-                                onManageCards = { navigator.navigateTo(AppDestination.SavedCards) },
+                                onPaymentSuccess = { navigator.navigateBack() },
                             )
                         }
                     }

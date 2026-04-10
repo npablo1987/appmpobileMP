@@ -59,8 +59,7 @@ fun HomeScreen(
     onProfileClick: () -> Unit,
     onOpenInvoiceDetail: () -> Unit,
     onGoToPayment: () -> Unit,
-    onGoToSavedCards: () -> Unit,
-    onPayWithSavedCard: () -> Unit,
+    onGoToPaymentDirect: () -> Unit,
     onBack: () -> Unit = {},
 ) {
     val authApiService = remember { AuthApiService() }
@@ -136,8 +135,7 @@ fun HomeScreen(
                     data = billingData!!,
                     onOpenInvoiceDetail = onOpenInvoiceDetail,
                     onGoToPayment = onGoToPayment,
-                    onPayWithSavedCard = onPayWithSavedCard,
-                    onGoToSavedCards = onGoToSavedCards,
+                    onGoToPaymentDirect = onGoToPaymentDirect,
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -216,8 +214,7 @@ private fun BillingResumeCard(
     data: BillingOverviewData,
     onOpenInvoiceDetail: () -> Unit,
     onGoToPayment: () -> Unit,
-    onPayWithSavedCard: () -> Unit,
-    onGoToSavedCards: () -> Unit,
+    onGoToPaymentDirect: () -> Unit,
 ) {
     val factura = data.factura_actual
     val suscripcion = data.suscripciones.firstOrNull()
@@ -268,9 +265,9 @@ private fun BillingResumeCard(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            InfoField("STB No", factura.numero_factura, Color.White)
-                            InfoField("Plan Amount", "$${factura.total}", Color(0xFFFFB84D))
-                            InfoField("Expiry Date", "${factura.periodo_mes}/${factura.periodo_anio}", Color.White)
+                            InfoField("Factura No", factura.numero_factura, Color.White)
+                            InfoField("Monto", "$${factura.total}", Color(0xFFFFB84D))
+                            InfoField("Vencimiento", "${factura.periodo_mes}/${factura.periodo_anio}", Color.White)
                         }
                     }
                 }
@@ -289,52 +286,30 @@ private fun BillingResumeCard(
                         shape = RoundedCornerShape(12.dp),
                     ) {
                         Text(
-                            "PAY WITH MERCADO PAGO",
+                            "💳 PAGAR CON TARJETA",
                             fontWeight = FontWeight.Bold,
                             style = MaterialTheme.typography.labelMedium,
                             color = Color.White
                         )
                     }
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    OutlinedButton(
+                        onClick = onGoToPaymentDirect,
+                        enabled = factura != null,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(40.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = Color.White,
+                            disabledContentColor = Color.Gray
+                        ),
+                        shape = RoundedCornerShape(10.dp),
                     ) {
-                        OutlinedButton(
-                            onClick = onPayWithSavedCard,
-                            enabled = factura != null,
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(40.dp),
-                            colors = ButtonDefaults.outlinedButtonColors(
-                                contentColor = Color.White,
-                                disabledContentColor = Color.Gray
-                            ),
-                            shape = RoundedCornerShape(10.dp),
-                        ) {
-                            Text(
-                                "💳 Saved Card",
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        }
-
-                        OutlinedButton(
-                            onClick = onGoToSavedCards,
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(40.dp),
-                            colors = ButtonDefaults.outlinedButtonColors(
-                                contentColor = Color.White
-                            ),
-                            shape = RoundedCornerShape(10.dp),
-                        ) {
-                            Text(
-                                "⚙️ Manage",
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        }
+                        Text(
+                            "🔒 PAGO DIRECTO",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
                     }
                 }
             }

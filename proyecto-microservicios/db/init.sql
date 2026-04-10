@@ -408,3 +408,66 @@ SELECT
     CURRENT_TIMESTAMP - ((gs % 15) * INTERVAL '4 hours'),
     'Dato simulado inicial para entorno local'
 FROM generate_series(1, 20) AS gs;
+
+-- ============================================
+-- TABLA MP_CUSTOMER - Clientes de Mercado Pago
+-- ============================================
+DROP TABLE IF EXISTS mp_customer CASCADE;
+
+CREATE TABLE mp_customer (
+    id SERIAL PRIMARY KEY,
+    id_usuario INTEGER NOT NULL UNIQUE REFERENCES usuario(id_usuario) ON DELETE CASCADE,
+    mp_customer_id VARCHAR(100) NOT NULL UNIQUE,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_mp_customer_id_usuario ON mp_customer(id_usuario);
+CREATE INDEX idx_mp_customer_mp_customer_id ON mp_customer(mp_customer_id);
+
+-- ============================================
+-- TABLA TARJETA_GUARDADA - Tarjetas de crédito guardadas
+-- ============================================
+DROP TABLE IF EXISTS tarjeta_guardada CASCADE;
+
+CREATE TABLE tarjeta_guardada (
+    id SERIAL PRIMARY KEY,
+    id_usuario INTEGER NOT NULL REFERENCES usuario(id_usuario) ON DELETE CASCADE,
+    mp_customer_id VARCHAR(100) NOT NULL,
+    mp_card_id VARCHAR(100) NOT NULL UNIQUE,
+    payment_method_id VARCHAR(50) NOT NULL,
+    brand VARCHAR(50),
+    last_four_digits VARCHAR(4) NOT NULL,
+    expiration_month INTEGER NOT NULL,
+    expiration_year INTEGER NOT NULL,
+    holder_name VARCHAR(200) NOT NULL,
+    is_default BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_tarjeta_guardada_id_usuario ON tarjeta_guardada(id_usuario);
+CREATE INDEX idx_tarjeta_guardada_mp_customer_id ON tarjeta_guardada(mp_customer_id);
+CREATE INDEX idx_tarjeta_guardada_mp_card_id ON tarjeta_guardada(mp_card_id);
+CREATE INDEX idx_tarjeta_guardada_is_default ON tarjeta_guardada(id_usuario, is_default);
+
+-- ============================================
+-- TRIGGER PARA ACTUALIZAR TIMESTAMP
+-- ============================================
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER update_mp_customer_updated_at
+    BEFORE UPDATE ON mp_customer
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_tarjeta_guardada_updated_at
+    BEFORE UPDATE ON tarjeta_guardada
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();

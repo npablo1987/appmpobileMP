@@ -6,7 +6,5 @@ sealed interface AppDestination {
     data object Profile : AppDestination
     data object InvoiceDetail : AppDestination
     data object Payment : AppDestination
-    data object SavedCards : AppDestination
-    data object AddCard : AppDestination
-    data object PayWithSavedCard : AppDestination
+    data object PaymentDirect : AppDestination
 }

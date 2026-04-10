@@ -13,6 +13,8 @@ import org.example.proyectogestionpagos.getPaymentsBaseUrl
 import org.example.proyectogestionpagos.data.model.CrearPagoRequest
 import org.example.proyectogestionpagos.data.model.CrearPagoResponse
 import org.example.proyectogestionpagos.data.model.EstadoPagoResponse
+import org.example.proyectogestionpagos.data.model.PagoDirectoRequest
+import org.example.proyectogestionpagos.data.model.PagoDirectoResponse
 
 class PaymentApiService {
     private val client = ApiClient.httpClient
@@ -49,6 +51,29 @@ class PaymentApiService {
         } catch (exception: Exception) {
             println("[PaymentApiService] error consultando estado: ${exception.message}")
             null
+        }
+    }
+
+    suspend fun pagarDirecto(request: PagoDirectoRequest): PagoDirectoResponse {
+        println("[PaymentApiService] pago directo id_usuario=${request.id_usuario} monto=${request.monto}")
+        return try {
+            val response = client.post("$pagosBaseUrl/pagos/directo/procesar") {
+                contentType(ContentType.Application.Json)
+                setBody(request)
+            }
+            response.body()
+        } catch (exception: ClientRequestException) {
+            println("[PaymentApiService] error pago directo: ${exception.message}")
+            PagoDirectoResponse(success = false, message = "Error en solicitud de pago")
+        } catch (exception: HttpRequestTimeoutException) {
+            println("[PaymentApiService] timeout pago directo")
+            PagoDirectoResponse(success = false, message = "Timeout procesando pago")
+        } catch (exception: ResponseException) {
+            println("[PaymentApiService] error HTTP pago directo: ${exception.message}")
+            PagoDirectoResponse(success = false, message = "Error en servidor de pagos")
+        } catch (exception: Exception) {
+            println("[PaymentApiService] error pago directo: ${exception.message}")
+            PagoDirectoResponse(success = false, message = "No fue posible procesar el pago")
         }
     }
 }

@@ -109,19 +109,22 @@ fun AddCardScreen(
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
-                    "⚠️ Modo de prueba",
+                    "ℹ️ Tarjetas de prueba disponibles",
                     fontWeight = FontWeight.Bold,
                     color = Color(0xFF7D5B00),
+                    fontSize = 13.sp
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    "Usa tarjetas de prueba de Mercado Pago. Ejemplo:\n" +
-                            "Visa: 4509 9535 6623 3704\n" +
-                            "Mastercard: 5031 7557 3453 0604\n" +
-                            "CVV: cualquier 3 dígitos\n" +
-                            "Fecha: cualquier fecha futura",
-                    fontSize = 12.sp,
+                    "Visa:\n4168 8188 4444 7115\n\n" +
+                    "Mastercard:\n5416 7526 0258 2580\n\n" +
+                    "American Express:\n3757 781744 61804\n\n" +
+                    "CVV: 123 (o 1234 para Amex)\n" +
+                    "Fecha: 11/30\n" +
+                    "Titular: APRO (para pago aprobado)",
+                    fontSize = 11.sp,
                     color = Color(0xFF7D5B00),
+                    fontWeight = FontWeight.SemiBold
                 )
             }
         }
@@ -206,10 +209,38 @@ fun AddCardScreen(
                     dialogMessage = "Por favor complete todos los campos"
                     return@Button
                 }
-
-                val token = "MOCK_TOKEN_${cardNumber.replace(" ", "")}_${System.currentTimeMillis()}"
                 
-                viewModel.guardarTarjeta(idUsuario, token, email) {
+                // Validaciones básicas
+                if (cardNumber.replace(" ", "").length < 13 || cardNumber.replace(" ", "").length > 19) {
+                    dialogMessage = "El número de tarjeta debe tener entre 13 y 19 dígitos"
+                    return@Button
+                }
+                
+                if (expiryMonth.toIntOrNull() == null || expiryMonth.toInt() < 1 || expiryMonth.toInt() > 12) {
+                    dialogMessage = "El mes debe estar entre 01 y 12"
+                    return@Button
+                }
+                
+                if (expiryYear.toIntOrNull() == null || expiryYear.length != 4) {
+                    dialogMessage = "El año debe tener 4 dígitos (YYYY)"
+                    return@Button
+                }
+                
+                if (cvv.length < 3 || cvv.length > 4) {
+                    dialogMessage = "El CVV debe tener 3 o 4 dígitos"
+                    return@Button
+                }
+
+                // Pasar todos los parámetros para que el ViewModel genere el token
+                viewModel.guardarTarjeta(
+                    idUsuario = idUsuario,
+                    cardNumber = cardNumber,
+                    cardholderName = cardHolder,
+                    expirationMonth = expiryMonth,
+                    expirationYear = expiryYear,
+                    securityCode = cvv,
+                    email = email
+                ) {
                     onBack()
                 }
             },

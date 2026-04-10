@@ -8,6 +8,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.example.proyectogestionpagos.data.model.TarjetaResponse
 import org.example.proyectogestionpagos.data.repository.CardRepository
+import org.example.proyectogestionpagos.data.service.MercadoPagoCardService
 
 sealed class CardUiState {
     object Idle : CardUiState()
@@ -29,9 +30,32 @@ class CardViewModel {
     var isLoadingCards by mutableStateOf(false)
         private set
 
-    fun guardarTarjeta(idUsuario: Int, token: String, email: String, onSuccess: () -> Unit) {
+    fun guardarTarjeta(
+        idUsuario: Int,
+        cardNumber: String,
+        cardholderName: String,
+        expirationMonth: String,
+        expirationYear: String,
+        securityCode: String,
+        email: String,
+        onSuccess: () -> Unit
+    ) {
         uiState = CardUiState.Loading
         viewModelScope.launch {
+            // Generar token válido de Mercado Pago
+            val token = MercadoPagoCardService.createCardToken(
+                cardNumber = cardNumber.replace(" ", ""),
+                cardholderName = cardholderName,
+                expirationMonth = expirationMonth,
+                expirationYear = expirationYear,
+                securityCode = securityCode
+            )
+            
+            if (token == null) {
+                uiState = CardUiState.Error("No fue posible generar token. Verifica los datos de la tarjeta")
+                return@launch
+            }
+            
             val response = repository.guardarTarjeta(idUsuario, token, email)
             if (response.success) {
                 uiState = CardUiState.Success(response.message)

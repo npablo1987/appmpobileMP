@@ -1,5 +1,6 @@
 package org.example.proyectogestionpagos.ui.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -28,21 +29,26 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import org.example.proyectogestionpagos.data.network.AuthApiService
+import org.example.proyectogestionpagos.data.network.PaymentApiService
 import org.example.proyectogestionpagos.data.session.SessionManager
 import org.example.proyectogestionpagos.ui.theme.AppColors
+import org.example.proyectogestionpagos.utils.PaymentLauncher
 
 @Composable
 fun PaymentScreen(
     onBack: () -> Unit,
 ) {
-    val authApiService = remember { AuthApiService() }
+    val paymentApiService = remember { PaymentApiService() }
     val billingData = SessionManager.billingOverview
     val factura = billingData?.factura_actual
 
     var isPreparingPayment by remember { mutableStateOf(false) }
+    var isCheckingStatus by remember { mutableStateOf(false) }
     var dialogMessage by remember { mutableStateOf<String?>(null) }
+    var idPago by remember { mutableStateOf<Int?>(null) }
+    var estadoPago by remember { mutableStateOf("PENDIENTE") }
     val scope = rememberCoroutineScope()
 
     Column(
@@ -76,45 +82,106 @@ fun PaymentScreen(
             Column(modifier = Modifier.padding(14.dp)) {
                 Text("Factura: ${factura.numero_factura}")
                 Text("Total a pagar: $${factura.total}", fontWeight = FontWeight.Bold)
-                Text("Estado: ${factura.estado_factura}")
+                Text("Estado actual: $estadoPago")
                 Text("Período: ${factura.periodo_mes}/${factura.periodo_anio}")
-                Spacer(modifier = Modifier.height(8.dp))
-                Text("Incluye plan y servicios contratados por el usuario.")
             }
         }
 
         Spacer(modifier = Modifier.height(14.dp))
 
-        if (isPreparingPayment) {
+        if (isPreparingPayment || isCheckingStatus) {
             CircularProgressIndicator(color = AppColors.Primary)
+            Spacer(modifier = Modifier.height(12.dp))
         }
 
         Button(
             onClick = {
                 val idUsuario = SessionManager.idUsuario
+                val monto = factura.total
                 if (idUsuario == null) {
                     dialogMessage = "Debe iniciar sesión nuevamente"
                     return@Button
                 }
+                if (monto <= 0) {
+                    dialogMessage = "Monto inválido para pago"
+                    return@Button
+                }
 
-                println("[PaymentScreen] Inicio de preparación de pago")
+                println("[PaymentScreen] inicio de pago")
                 isPreparingPayment = true
                 scope.launch {
-                    val response = authApiService.preparePayment(idUsuario, factura.id_factura)
+                    val response = paymentApiService.crearPago(
+                        idUsuario = idUsuario,
+                        descripcion = "Pago suscripción ${factura.numero_factura}",
+                        monto = monto,
+                    )
                     isPreparingPayment = false
-                    dialogMessage = if (response.success) {
-                        "Pago preparado correctamente"
-                    } else {
-                        response.message.ifEmpty { "No fue posible preparar el pago" }
+                    if (!response.success || response.data == null) {
+                        dialogMessage = response.message.ifEmpty { "No fue posible iniciar el pago" }
+                        println("[PaymentScreen] error al crear pago: ${response.message}")
+                        return@launch
                     }
-                    println("[PaymentScreen] Resultado preparación pago: ${response.message}")
+
+                    idPago = response.data.id_pago
+                    estadoPago = "PENDIENTE"
+                    println("[PaymentScreen] redirección a Mercado Pago id_pago=${response.data.id_pago}")
+                    PaymentLauncher.openPaymentUrl(response.data.url_pago)
                 }
             },
             modifier = Modifier.fillMaxWidth(),
             enabled = !isPreparingPayment,
         ) {
-            Text("Confirmar pago")
+            Text("Pagar ahora")
         }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Button(
+            onClick = {
+                val currentId = idPago
+                if (currentId == null) {
+                    dialogMessage = "Primero debes iniciar el pago"
+                    return@Button
+                }
+                scope.launch {
+                    isCheckingStatus = true
+                    repeat(3) {
+                        val statusResponse = paymentApiService.consultarEstado(currentId)
+                        if (statusResponse != null) {
+                            estadoPago = statusResponse.estado
+                            println("[PaymentScreen] resultado estado pago=${statusResponse.estado}")
+                            if (statusResponse.estado != "PENDIENTE") {
+                                isCheckingStatus = false
+                                return@launch
+                            }
+                        }
+                        delay(1500)
+                    }
+                    isCheckingStatus = false
+                }
+            },
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !isCheckingStatus,
+        ) {
+            Text("Consultar estado")
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        val statusColor = when (estadoPago) {
+            "PAGADO" -> Color(0xFF1B5E20)
+            "RECHAZADO", "CANCELADO" -> Color(0xFFB71C1C)
+            else -> Color(0xFF8A6D1F)
+        }
+        Text(
+            text = "Estado del pago: $estadoPago",
+            color = statusColor,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color.White, RoundedCornerShape(8.dp))
+                .padding(12.dp),
+        )
     }
 
     if (dialogMessage != null) {

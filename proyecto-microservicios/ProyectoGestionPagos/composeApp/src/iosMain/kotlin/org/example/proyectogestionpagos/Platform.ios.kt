@@ -9,3 +9,5 @@ class IOSPlatform : Platform {
 actual fun getPlatform(): Platform = IOSPlatform()
 
 actual fun getApiBaseUrl(): String = "http://localhost:8000"
+
+actual fun getPaymentsBaseUrl(): String = "http://localhost:8002"

@@ -12,10 +12,17 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
 
+        MainActivityHolder.activity = this
+
         setContent {
             App()
         }
     }
+    override fun onDestroy() {
+        MainActivityHolder.activity = null
+        super.onDestroy()
+    }
+
 }
 
 @Preview

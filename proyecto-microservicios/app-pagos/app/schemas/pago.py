@@ -40,7 +40,7 @@ class PagoCreate(BaseModel):
     @field_validator("estado_pago")
     @classmethod
     def validate_estado(cls, v):
-        estados_validos = ["PENDIENTE", "PAGADO", "RECHAZADO", "ANULADO", "CANCELADO"]
+        estados_validos = ["PENDIENTE", "PAGADO", "RECHAZADO", "ANULADO", "CANCELADO", "EXPIRADO"]
         if v not in estados_validos:
             raise ValueError(f'El estado debe ser uno de: {", ".join(estados_validos)}')
         return v
@@ -79,6 +79,12 @@ class PagoEstadoResponse(BaseModel):
     estado: str
 
 
+class PagoCancelarResponse(BaseModel):
+    success: bool
+    message: str
+    data: PagoEstadoResponse | None = None
+
+
 class WebhookAckResponse(BaseModel):
     success: bool
     message: str
@@ -101,7 +107,7 @@ class PagoEstadoUpdate(BaseModel):
     @field_validator("estado_pago")
     @classmethod
     def validate_estado(cls, v):
-        estados_validos = ["PENDIENTE", "PAGADO", "RECHAZADO", "ANULADO", "CANCELADO"]
+        estados_validos = ["PENDIENTE", "PAGADO", "RECHAZADO", "ANULADO", "CANCELADO", "EXPIRADO"]
         if v not in estados_validos:
             raise ValueError(f'El estado debe ser uno de: {", ".join(estados_validos)}')
         return v

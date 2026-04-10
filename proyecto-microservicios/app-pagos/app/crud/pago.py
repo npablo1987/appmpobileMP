@@ -94,6 +94,7 @@ def map_mp_status(mp_status: str) -> str:
         "pending": "PENDIENTE",
         "rejected": "RECHAZADO",
         "cancelled": "CANCELADO",
+        "expired": "EXPIRADO",
         "refunded": "ANULADO",
         "charged_back": "ANULADO",
     }

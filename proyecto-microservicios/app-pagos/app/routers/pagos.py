@@ -216,16 +216,28 @@ def procesar_pago_directo(payload: PagoDirectoRequest, db: Session = Depends(get
 
     logger.info("[pagos] INICIO PAGO DIRECTO id_usuario=%s monto=%s", payload.id_usuario, payload.monto)
     try:
+        import uuid
+        auth_header = {"Authorization": f"Bearer {MP_ACCESS_TOKEN}", "Content-Type": "application/json"}
+
+        # Tokenizar tarjeta usando el access token como Bearer (server-side tokenization)
         token_payload = {
-            "public_key": os.getenv("MP_PUBLIC_KEY", ""),
             "card_number": payload.numero_tarjeta,
             "expiration_month": payload.mes_vencimiento,
             "expiration_year": payload.anio_vencimiento,
             "security_code": payload.cvv,
-            "cardholder": {"name": payload.nombre_titular, "identification": {"type": "DNI", "number": "12345678"}},
+            "cardholder": {
+                "name": payload.nombre_titular,
+                "identification": {"type": "RUT", "number": "14357293-K"},
+            },
         }
-        token_response = requests.post("https://api.mercadopago.com/v1/card_tokens", json=token_payload, timeout=20)
+        token_response = requests.post(
+            "https://api.mercadopago.com/v1/card_tokens",
+            json=token_payload,
+            headers=auth_header,
+            timeout=20,
+        )
         if token_response.status_code != 201:
+            logger.error("[pagos] Error tokenizando tarjeta: %s", token_response.text)
             raise HTTPException(status_code=502, detail="No fue posible tokenizar la tarjeta")
 
         card_token = token_response.json().get("id")
@@ -233,22 +245,21 @@ def procesar_pago_directo(payload: PagoDirectoRequest, db: Session = Depends(get
             raise HTTPException(status_code=502, detail="No fue posible tokenizar la tarjeta")
 
         external_reference = crud_pago.generate_external_reference(payload.id_usuario)
+        # Nota: no incluir currency_id (rechazado por MP para CLP) ni payment_method_id
+        # (MP lo infiere automáticamente del token de tarjeta)
         payment_payload = {
             "token": card_token,
             "transaction_amount": float(payload.monto),
-            "currency_id": "CLP",
             "description": payload.descripcion,
+            "installments": 1,
             "external_reference": external_reference,
-            "payer": {
-                "email": payload.email,
-                "first_name": payload.nombre_titular.split()[0],
-                "last_name": " ".join(payload.nombre_titular.split()[1:]) if len(payload.nombre_titular.split()) > 1 else "Usuario",
-            },
+            "payer": {"email": payload.email},
         }
+        idempotency_key = str(uuid.uuid4())
         payment_response = requests.post(
             "https://api.mercadopago.com/v1/payments",
             json=payment_payload,
-            headers={"Authorization": f"Bearer {MP_ACCESS_TOKEN}", "Content-Type": "application/json"},
+            headers={**auth_header, "X-Idempotency-Key": idempotency_key},
             timeout=20,
         )
         payment_data = payment_response.json()

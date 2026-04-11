@@ -21,8 +21,9 @@ import org.example.proyectogestionpagos.ui.components.TopBanner
 import org.example.proyectogestionpagos.ui.screens.HomeScreen
 import org.example.proyectogestionpagos.ui.screens.InvoiceDetailScreen
 import org.example.proyectogestionpagos.ui.screens.LoginScreen
-import org.example.proyectogestionpagos.ui.screens.PaymentScreen
 import org.example.proyectogestionpagos.ui.screens.PaymentDirectScreen
+import org.example.proyectogestionpagos.ui.screens.PaymentScreen
+import org.example.proyectogestionpagos.ui.screens.PaymentSuccessScreen
 import org.example.proyectogestionpagos.ui.screens.ProfileScreen
 
 @Composable
@@ -86,11 +87,21 @@ fun App() {
 
                             AppDestination.Payment -> PaymentScreen(
                                 onBack = { navigator.navigateBack() },
+                                onPaymentSuccess = { data ->
+                                    navigator.navigateTo(AppDestination.PaymentSuccess(data))
+                                },
                             )
 
                             AppDestination.PaymentDirect -> PaymentDirectScreen(
                                 onBack = { navigator.navigateBack() },
-                                onPaymentSuccess = { navigator.navigateBack() },
+                                onPaymentSuccess = { data ->
+                                    navigator.navigateTo(AppDestination.PaymentSuccess(data))
+                                },
+                            )
+
+                            is AppDestination.PaymentSuccess -> PaymentSuccessScreen(
+                                data = (navigator.currentDestination as AppDestination.PaymentSuccess).data,
+                                onGoHome = { navigator.clearAndNavigateTo(AppDestination.Home) },
                             )
                         }
                     }

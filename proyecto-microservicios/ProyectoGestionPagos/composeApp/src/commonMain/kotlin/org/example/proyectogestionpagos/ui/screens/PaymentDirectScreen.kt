@@ -1,6 +1,7 @@
 package org.example.proyectogestionpagos.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -44,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.example.proyectogestionpagos.data.model.PagoDirectoRequest
 import org.example.proyectogestionpagos.data.session.SessionManager
+import org.example.proyectogestionpagos.navigation.PaymentSuccessData
 import org.example.proyectogestionpagos.ui.theme.AppColors
 import org.example.proyectogestionpagos.ui.viewmodel.EstadoPagoUi
 import org.example.proyectogestionpagos.ui.viewmodel.PaymentFlowViewModel
@@ -62,9 +64,239 @@ private fun formatCountdown(segundosRestantes: Int): String {
 }
 
 @Composable
+fun MercadoPagoPaymentModal(
+    facturaNumero: String? = null,
+    montoTotal: Double? = null,
+    viewModel: PaymentFlowViewModel,
+    onDismiss: () -> Unit,
+    onPaymentSuccess: (PaymentSuccessData) -> Unit,
+) {
+    val uiState = viewModel.uiState
+
+    DisposableEffect(Unit) {
+        onDispose {
+            viewModel.cancelarPagoPorSalidaPantalla()
+        }
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.5f))
+            .clickable(enabled = !uiState.esperandoConfirmacion) { onDismiss() },
+        contentAlignment = Alignment.Center,
+    ) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth(0.95f)
+                .padding(16.dp)
+                .clickable(enabled = false) {},
+            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            elevation = CardDefaults.cardElevation(defaultElevation = 12.dp),
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                // Encabezado con datos de factura (siempre visible si se proporcionan)
+                if (facturaNumero != null || montoTotal != null) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(containerColor = AppColors.Primary),
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp),
+                        ) {
+                            if (facturaNumero != null) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                ) {
+                                    Text("Factura:", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                                    Text(facturaNumero, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                            if (montoTotal != null) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                ) {
+                                    Text("Monto:", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                                    Text(
+                                        "$ ${formatMoney(montoTotal)}",
+                                        color = Color(0xFFFFB84D),
+                                        fontSize = 15.sp,
+                                        fontWeight = FontWeight.ExtraBold,
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                when {
+                    uiState.estadoFinal != null -> {
+                        val mensaje = uiState.mensajeFinal ?: viewModel.textoEstadoAmigable(uiState.estadoFinal)
+                        val (fondo, colorTexto) = when (uiState.estadoFinal) {
+                            EstadoPagoUi.APROBADO -> Color(0xFFE8F5E9) to Color(0xFF2E7D32)
+                            EstadoPagoUi.RECHAZADO -> Color(0xFFFDE1DE) to Color(0xFF8C1D18)
+                            EstadoPagoUi.CANCELADO_USUARIO, EstadoPagoUi.CANCELADO, EstadoPagoUi.EXPIRADO -> Color(0xFFFFF3E0) to Color(0xFFE65100)
+                            else -> Color(0xFFF3E5F5) to Color(0xFF6A1B9A)
+                        }
+
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(14.dp),
+                            colors = CardDefaults.cardColors(containerColor = fondo),
+                        ) {
+                            Text(
+                                mensaje,
+                                modifier = Modifier.padding(16.dp),
+                                color = colorTexto,
+                                fontWeight = FontWeight.SemiBold,
+                                textAlign = TextAlign.Center,
+                            )
+                        }
+
+                        if (uiState.estadoFinal == EstadoPagoUi.APROBADO) {
+                            Button(
+                                onClick = {
+                                    val factura = SessionManager.billingOverview?.factura_actual
+                                    onPaymentSuccess(
+                                        PaymentSuccessData(
+                                            idPago = uiState.idPago ?: 0,
+                                            mpPaymentId = uiState.mpPaymentId,
+                                            externalReference = uiState.externalReference,
+                                            monto = montoTotal ?: 0.0,
+                                            numeroFactura = facturaNumero ?: factura?.numero_factura ?: "-",
+                                            periodoMes = factura?.periodo_mes ?: 0,
+                                            periodoAnio = factura?.periodo_anio ?: 0,
+                                        )
+                                    )
+                                    onDismiss()
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(48.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = AppColors.PrimaryDark),
+                                shape = RoundedCornerShape(12.dp),
+                            ) {
+                                Text("Aceptar", color = Color.White, fontWeight = FontWeight.Bold)
+                            }
+                        } else {
+                            Button(
+                                onClick = {
+                                    viewModel.limpiarEstadoFinal()
+                                    onDismiss()
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(48.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = AppColors.Primary),
+                                shape = RoundedCornerShape(12.dp),
+                            ) {
+                                Text("Reintentar", color = Color.White, fontWeight = FontWeight.Bold)
+                            }
+                            Button(
+                                onClick = onDismiss,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(48.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = AppColors.PrimaryDark),
+                                shape = RoundedCornerShape(12.dp),
+                            ) {
+                                Text("Cerrar", color = Color.White, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+
+                    uiState.esperandoConfirmacion -> {
+                        CircularProgressIndicator(color = AppColors.Primary, strokeWidth = 4.dp)
+                        Text(
+                            "Procesando pago",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 20.sp,
+                            color = AppColors.PrimaryDark,
+                        )
+                        Text(
+                            "Estamos esperando la confirmación de Mercado Pago",
+                            color = Color.Gray,
+                            textAlign = TextAlign.Center,
+                            fontSize = 12.sp,
+                        )
+
+                        Text(
+                            formatCountdown(uiState.segundosRestantes),
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 48.sp,
+                            color = AppColors.Primary,
+                            fontFamily = FontFamily.Monospace,
+                        )
+
+                        LinearProgressIndicator(
+                            progress = { uiState.segundosRestantes / 120f },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(8.dp),
+                            color = AppColors.Primary,
+                        )
+
+                        Text(
+                            "Tiempo disponible: ${formatCountdown(uiState.segundosRestantes)}",
+                            color = Color.Gray,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+
+                        uiState.errorRedVisible?.let {
+                            Text(text = it, color = Color(0xFFE65100), fontSize = 12.sp)
+                        }
+
+                        Button(
+                            onClick = { viewModel.cancelarPagoPorUsuario() },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFB71C1C)),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(48.dp),
+                            shape = RoundedCornerShape(12.dp),
+                        ) {
+                            Text("Cancelar compra", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        }
+                    }
+
+                    else -> {
+                        // Estado inicial: iniciando pago (procesando = true antes de esperandoConfirmacion)
+                        CircularProgressIndicator(color = AppColors.Primary, strokeWidth = 4.dp)
+                        Text(
+                            "Iniciando pago...",
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 16.sp,
+                            color = AppColors.PrimaryDark,
+                        )
+                        Text(
+                            "Por favor espera mientras se procesa tu solicitud",
+                            color = Color.Gray,
+                            textAlign = TextAlign.Center,
+                            fontSize = 12.sp,
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
 fun PaymentDirectScreen(
     onBack: () -> Unit,
-    onPaymentSuccess: () -> Unit,
+    onPaymentSuccess: (PaymentSuccessData) -> Unit,
 ) {
     val billingData = SessionManager.billingOverview
     val factura = billingData?.factura_actual
@@ -77,12 +309,7 @@ fun PaymentDirectScreen(
     var anioVencimiento by remember { mutableStateOf("2030") }
     var cvv by remember { mutableStateOf("123") }
     var dialogMessage by remember { mutableStateOf<String?>(null) }
-
-    DisposableEffect(Unit) {
-        onDispose {
-            viewModel.cancelarPagoPorSalidaPantalla()
-        }
-    }
+    var showPaymentModal by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -199,88 +426,6 @@ fun PaymentDirectScreen(
             Spacer(modifier = Modifier.height(16.dp))
         }
 
-        if (uiState.esperandoConfirmacion) {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFFF3E5F5)),
-            ) {
-                Column(
-                    modifier = Modifier.fillMaxWidth().padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(14.dp),
-                ) {
-                    CircularProgressIndicator(color = AppColors.Primary, strokeWidth = 4.dp)
-                    Text("Procesando pago", fontWeight = FontWeight.Bold, fontSize = 20.sp, color = AppColors.PrimaryDark)
-                    Text(
-                        "Estamos esperando la confirmación de Mercado Pago",
-                        color = Color.Gray,
-                        textAlign = TextAlign.Center,
-                        fontSize = 12.sp,
-                    )
-
-                    Text(
-                        formatCountdown(uiState.segundosRestantes),
-                        fontWeight = FontWeight.ExtraBold,
-                        fontSize = 40.sp,
-                        color = AppColors.PrimaryDark,
-                        fontFamily = FontFamily.Monospace,
-                    )
-
-                    LinearProgressIndicator(
-                        progress = { uiState.segundosRestantes / 120f },
-                        modifier = Modifier.fillMaxWidth().height(8.dp),
-                        color = AppColors.Primary,
-                    )
-                    Text(
-                        "Tiempo restante para completar el pago: ${formatCountdown(uiState.segundosRestantes)}",
-                        color = Color.Gray,
-                        fontSize = 12.sp,
-                    )
-
-                    uiState.errorRedVisible?.let {
-                        Text(text = it, color = Color(0xFFE65100), fontSize = 12.sp)
-                    }
-
-                    Button(
-                        onClick = { viewModel.cancelarPagoPorUsuario() },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFB71C1C)),
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                    ) {
-                        Text("Cancelar pago", color = Color.White, fontWeight = FontWeight.Bold)
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-        }
-
-        uiState.estadoFinal?.let {
-            val mensaje = uiState.mensajeFinal ?: viewModel.textoEstadoAmigable(it)
-            val (fondo, colorTexto) = when (it) {
-                EstadoPagoUi.APROBADO -> Color(0xFFE8F5E9) to Color(0xFF2E7D32)
-                EstadoPagoUi.RECHAZADO -> Color(0xFFFDE1DE) to Color(0xFF8C1D18)
-                EstadoPagoUi.CANCELADO_USUARIO, EstadoPagoUi.CANCELADO, EstadoPagoUi.EXPIRADO -> Color(0xFFFFF3E0) to Color(0xFFE65100)
-                else -> Color(0xFFF3E5F5) to Color(0xFF6A1B9A)
-            }
-
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(14.dp),
-                colors = CardDefaults.cardColors(containerColor = fondo),
-            ) {
-                Text(
-                    mensaje,
-                    modifier = Modifier.padding(16.dp),
-                    color = colorTexto,
-                    fontWeight = FontWeight.SemiBold,
-                    textAlign = TextAlign.Center,
-                )
-            }
-            Spacer(modifier = Modifier.height(16.dp))
-        }
-
         if (!uiState.esperandoConfirmacion && uiState.estadoFinal == null) {
             Button(
                 onClick = {
@@ -305,13 +450,14 @@ fun PaymentDirectScreen(
                         anio_vencimiento = anioVencimiento.toIntOrNull() ?: 2030,
                         cvv = cvv,
                         nombre_titular = nombreTitular,
-                        email = "usuario@test.com",
+                        email = "test_user_123@testuser.com",
                         descripcion = "Pago factura ${factura.numero_factura}",
                         monto = factura.total,
                     )
 
+                    showPaymentModal = true
                     viewModel.iniciarFlujoPago(request) {
-                        onPaymentSuccess()
+                        // La navegación al éxito la gestiona el botón "Aceptar" del modal
                     }
                 },
                 modifier = Modifier.fillMaxWidth().height(56.dp),
@@ -319,38 +465,7 @@ fun PaymentDirectScreen(
                 colors = ButtonDefaults.buttonColors(containerColor = AppColors.Primary),
                 shape = RoundedCornerShape(12.dp),
             ) {
-                Text("Pagar", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-            }
-        }
-
-        if (uiState.estadoFinal != null) {
-            Spacer(modifier = Modifier.height(8.dp))
-            if (uiState.estadoFinal == EstadoPagoUi.APROBADO) {
-                Button(
-                    onClick = onPaymentSuccess,
-                    modifier = Modifier.fillMaxWidth().height(50.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = AppColors.PrimaryDark),
-                    shape = RoundedCornerShape(12.dp),
-                ) { Text("Aceptar", color = Color.White, fontWeight = FontWeight.Bold) }
-            } else {
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Button(
-                        onClick = {
-                            viewModel.limpiarEstadoFinal()
-                            numeroTarjeta = ""
-                        },
-                        modifier = Modifier.weight(1f).height(50.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = AppColors.Primary),
-                        shape = RoundedCornerShape(12.dp),
-                    ) { Text("Reintentar", color = Color.White, fontWeight = FontWeight.Bold) }
-
-                    Button(
-                        onClick = onBack,
-                        modifier = Modifier.weight(1f).height(50.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = AppColors.PrimaryDark),
-                        shape = RoundedCornerShape(12.dp),
-                    ) { Text("Volver", color = Color.White, fontWeight = FontWeight.Bold) }
-                }
+                Text("Pagar con Mercado Pago", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
             }
         }
 
@@ -371,6 +486,16 @@ fun PaymentDirectScreen(
                 Text("Titular APRO: aprobado | OTHE/CALL/FUND/SECU/EXPI/FORM: rechazado | CONT: pendiente", fontSize = 10.sp, color = Color.Gray)
             }
         }
+    }
+
+    if (showPaymentModal) {
+        MercadoPagoPaymentModal(
+            facturaNumero = factura?.numero_factura,
+            montoTotal = factura?.total,
+            viewModel = viewModel,
+            onDismiss = { showPaymentModal = false },
+            onPaymentSuccess = onPaymentSuccess,
+        )
     }
 
     dialogMessage?.let {

@@ -30,6 +30,8 @@ data class PaymentFlowUiState(
     val procesando: Boolean = false,
     val esperandoConfirmacion: Boolean = false,
     val idPago: Int? = null,
+    val mpPaymentId: Long? = null,
+    val externalReference: String? = null,
     val segundosRestantes: Int = SEGUNDOS_TIMEOUT,
     val estadoFinal: EstadoPagoUi? = null,
     val mensajeFinal: String? = null,
@@ -66,6 +68,8 @@ class PaymentFlowViewModel(
                 procesando = false,
                 esperandoConfirmacion = true,
                 idPago = idPagoCreado,
+                mpPaymentId = respuesta.data.mp_payment_id,
+                externalReference = respuesta.data.external_reference,
                 segundosRestantes = SEGUNDOS_TIMEOUT,
             )
 
@@ -86,6 +90,18 @@ class PaymentFlowViewModel(
         if (uiState.esperandoConfirmacion) {
             cancelarPagoPorUsuario()
         }
+    }
+
+    fun iniciarEscuchaWebPago(idPago: Int, onPagoAprobado: () -> Unit = {}) {
+        limpiarEstadoFinal()
+        uiState = uiState.copy(
+            esperandoConfirmacion = true,
+            idPago = idPago,
+            segundosRestantes = SEGUNDOS_TIMEOUT,
+            procesando = false,
+        )
+        iniciarTemporizador()
+        iniciarEscuchaEstado(idPago, onPagoAprobado)
     }
 
     fun limpiarEstadoFinal() {

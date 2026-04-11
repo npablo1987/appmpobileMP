@@ -1,15 +1,33 @@
-# Python
+# ─── Entorno y Secretos ───────────────────────────────────────────────────────
+# NUNCA versionar tokens ni credenciales
+.env
+.env.*
+!.env.example
+
+# ─── Archivos de Prueba y Depuración ─────────────────────────────────────────
+# Scripts shell de prueba
+test_*.sh
+
+# Scripts Python de prueba y depuración
+test_*.py
+
+# ─── Python ───────────────────────────────────────────────────────────────────
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
-env/
+
+# Entornos virtuales
 venv/
+env/
 ENV/
+.venv/
+
+# Distribución / empaquetado
 build/
-develop-eggs/
 dist/
+develop-eggs/
 downloads/
 eggs/
 .eggs/
@@ -23,30 +41,22 @@ wheels/
 .installed.cfg
 *.egg
 
-# Virtual environments
-venv/
-ENV/
-env/
+# ─── Base de Datos Local ──────────────────────────────────────────────────────
+*.db
+*.sqlite
+*.sqlite3
 
-# IDEs
+# ─── IDEs ─────────────────────────────────────────────────────────────────────
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
 
-# OS
+# ─── Sistema Operativo ────────────────────────────────────────────────────────
 .DS_Store
 Thumbs.db
 
-# Docker
+# ─── Logs ─────────────────────────────────────────────────────────────────────
 *.log
-
-# Environment variables
-.env.local
-.env.*.local
-
-# Database
-*.db
-*.sqlite
-*.sqlite3
+logs/

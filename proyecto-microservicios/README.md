@@ -1,676 +1,753 @@
-# Sistema de Gestión de Usuarios y Servicios - Microservicios
+# Sistema de Gestión de Pagos — Microservicios + App Móvil
 
-![Version](https://img.shields.io/badge/version-1.0.0-blue)
-![Python](https://img.shields.io/badge/python-3.12+-green)
+![Version](https://img.shields.io/badge/version-2.0.0-blue)
+![Python](https://img.shields.io/badge/python-3.11+-green)
+![Kotlin](https://img.shields.io/badge/kotlin-multiplatform-purple)
 ![Docker](https://img.shields.io/badge/docker-required-blue)
+![MercadoPago](https://img.shields.io/badge/MercadoPago-API%20v1-009ee3)
 
-Sistema empresarial completo de gestión de usuarios con suscripciones, servicios contratados, pagos, facturación y notificaciones, implementado con arquitectura de microservicios escalable y modular.
+Sistema completo de gestión de pagos con arquitectura de microservicios en Python/FastAPI y aplicación móvil multiplataforma en Kotlin Multiplatform (Android + iOS). Integra MercadoPago como pasarela de pagos principal, soportando pago directo con tarjeta, pago a través del navegador (checkout externo) y almacenamiento seguro de tarjetas para cobros futuros.
 
-## 📋 Tabla de Contenidos
+---
 
-- [Características](#características)
-- [Arquitectura](#arquitectura)
+## Tabla de Contenidos
+
+- [Arquitectura General](#arquitectura-general)
+- [Microservicios](#microservicios)
+- [Integración con MercadoPago](#integración-con-mercadopago)
+- [Aplicación Móvil](#aplicación-móvil)
 - [Estructura del Proyecto](#estructura-del-proyecto)
 - [Requisitos Previos](#requisitos-previos)
+- [Variables de Entorno](#variables-de-entorno)
 - [Instalación y Ejecución](#instalación-y-ejecución)
 - [Documentación API](#documentación-api)
-- [Configuración](#configuración)
-- [Desarrollo Local](#desarrollo-local)
+- [Endpoints de Pagos](#endpoints-de-pagos)
+- [Base de Datos](#base-de-datos)
 - [Troubleshooting](#troubleshooting)
 - [Tecnologías](#tecnologías)
-- [Contribución](#contribución)
+- [Seguridad](#seguridad)
 
-## 🎯 Características
+---
 
-- ✅ **Arquitectura de Microservicios** - 3 servicios independientes con responsabilidades bien definidas
-- ✅ **Gestión de Usuarios** - CRUD completo con validaciones robustas
-- ✅ **Sistema de Suscripciones** - Planes mensuales y gestión de ciclo de vida
-- ✅ **Servicios Contratados** - Relación múltiple entre usuarios y servicios
-- ✅ **Procesamiento de Pagos** - Integración modular para pagos y seguimiento
-- ✅ **Facturación Automática** - Generación y detalles de facturas
-- ✅ **Sistema de Notificaciones** - Email, SMS (simulados) y notificaciones internas
-- ✅ **Métodos de Pago** - Múltiples opciones de pago por usuario
-- ✅ **Health Checks** - Monitoreo de salud de servicios
-- ✅ **Documentación Interactiva** - Swagger/OpenAPI automático
-- ✅ **CORS Habilitado** - Listo para consumo desde frontend
-- ✅ **Persistencia de Datos** - Base de datos PostgreSQL compartida
-- ✅ **Código Modular y Escalable** - Fácil de mantener y extender
-- ✅ **Contenedorización Completa** - Docker Compose con orquestación automática
-
-## 🏗️ Arquitectura
-
-### Diagrama de Componentes
+## Arquitectura General
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                    CLIENTE / FRONTEND                            │
-└────────────────────┬──────────────────────────────────────────────┘
-                     │
-         ┌───────────┼───────────┐
-         │           │           │
-    ┌────▼────┐  ┌───▼────┐  ┌──▼──────────┐
-    │ App Core│  │ Pagos  │  │Notificaciones│
-    │ :8001   │  │ :8002  │  │  :8003       │
-    └────┬────┘  └───┬────┘  └──┬──────────┘
-         │           │           │
-         └───────────┼───────────┘
-                     │
-            ┌────────▼──────────┐
-            │ PostgreSQL 15     │
-            │ (Base de Datos)   │
-            └───────────────────┘
+┌──────────────────────────────────────────────────────────────────────┐
+│               APP MÓVIL (Android / iOS)                              │
+│           Kotlin Multiplatform Compose                                │
+└────────────┬──────────────────────────────┬─────────────────────────┘
+             │                              │
+     ┌───────▼──────┐              ┌────────▼───────┐
+     │  App Core    │              │  App Pagos     │          App Notificaciones
+     │  :8001       │              │  :8002         │               :8003
+     │  Usuarios    │              │  Pagos         │         Notificaciones
+     │  Planes      │              │  Tarjetas      │         Email / SMS
+     │  Servicios   │              │  MercadoPago   │
+     │  Facturas    │              │                │
+     └───────┬──────┘              └────────┬───────┘
+             │                              │
+             └──────────────┬───────────────┘
+                            │
+               ┌────────────▼──────────────┐
+               │     PostgreSQL 15          │
+               │   (Base de Datos)          │
+               └───────────────────────────┘
+                            │
+               ┌────────────▼──────────────┐
+               │     MercadoPago API v1     │
+               │  api.mercadopago.com/v1    │
+               └───────────────────────────┘
 ```
 
 ### Microservicios
 
-| Servicio | Puerto | Responsabilidad |
-|----------|--------|-----------------|
-| **app-core** | 8001 | Usuarios, planes, servicios, suscripciones, facturas |
-| **app-pagos** | 8002 | Procesamiento de pagos, seguimiento, validaciones |
-| **app-notificaciones** | 8003 | Email, SMS, notificaciones internas |
+| Servicio              | Puerto | Responsabilidad                                                  |
+|-----------------------|--------|------------------------------------------------------------------|
+| **app-core**          | 8001   | Usuarios, planes, servicios, suscripciones, facturas, métodos de pago |
+| **app-pagos**         | 8002   | Procesamiento de pagos con MercadoPago, tarjetas guardadas       |
+| **app-notificaciones**| 8003   | Notificaciones internas, email y SMS                             |
 
-## 📁 Estructura del Proyecto
+---
+
+## Integración con MercadoPago
+
+El microservicio `app-pagos` implementa tres flujos de pago independientes usando la API REST de MercadoPago v1. Todos los flujos utilizan el `MP_ACCESS_TOKEN` configurado en el entorno.
+
+### Flujo 1 — Pago Directo con Tarjeta
+
+Permite al usuario ingresar los datos de su tarjeta directamente en la app. El backend tokeniza la tarjeta de forma segura y procesa el cobro sin exponer los datos en el cliente.
+
+```
+App Móvil                   app-pagos                       MercadoPago API
+   │                             │                                 │
+   │  POST /pagos/directo/       │                                 │
+   │  procesar                   │                                 │
+   │  {numero_tarjeta, cvv,      │                                 │
+   │   vencimiento, email,       │                                 │
+   │   monto, descripcion}       │                                 │
+   │────────────────────────────►│                                 │
+   │                             │  POST /v1/card_tokens           │
+   │                             │  {card_number, expiration,      │
+   │                             │   security_code, cardholder}   │
+   │                             │────────────────────────────────►│
+   │                             │◄────────────────────────────────│
+   │                             │  {id: "card_token_xxx"}         │
+   │                             │                                 │
+   │                             │  POST /v1/payments              │
+   │                             │  {token, amount, email,         │
+   │                             │   installments, idempotency}    │
+   │                             │────────────────────────────────►│
+   │                             │◄────────────────────────────────│
+   │                             │  {id, status: "approved",       │
+   │                             │   status_detail: ...}           │
+   │                             │                                 │
+   │◄────────────────────────────│                                 │
+   │  {id_pago, estado, mp_id,   │                                 │
+   │   external_reference}       │                                 │
+```
+
+**Detalles técnicos:**
+- La tarjeta nunca viaja a terceros directamente; se tokeniza servidor-a-servidor (`POST /v1/card_tokens`) usando el `Bearer MP_ACCESS_TOKEN`.
+- Se genera un `X-Idempotency-Key` único (UUID v4) por transacción para evitar cobros duplicados.
+- MP infiere el `payment_method_id` automáticamente desde el token. No se envía `currency_id` para pagos en CLP.
+- El estado retornado por MP (`approved`, `in_process`, `rejected`) se mapea a los estados internos `PAGADO`, `PENDIENTE`, `RECHAZADO`.
+- Si el pago queda `PAGADO`, se persiste inmediatamente en la base de datos.
+
+---
+
+### Flujo 2 — Checkout desde Navegador (Preference)
+
+Redirige al usuario al checkout hosted de MercadoPago. Útil cuando no se quiere procesar datos de tarjeta en el servidor.
+
+```
+App Móvil                   app-pagos                       MercadoPago API
+   │                             │                                 │
+   │  POST /pagos/crear          │                                 │
+   │  {id_usuario, monto,        │                                 │
+   │   descripcion, email}       │                                 │
+   │────────────────────────────►│                                 │
+   │                             │  POST /checkout/preferences     │
+   │                             │  {items, payer, back_urls,      │
+   │                             │   notification_url,             │
+   │                             │   external_reference}           │
+   │                             │────────────────────────────────►│
+   │                             │◄────────────────────────────────│
+   │                             │  {id, init_point: "https://..."}│
+   │                             │                                 │
+   │◄────────────────────────────│                                 │
+   │  {id_pago, url_pago,        │                                 │
+   │   preference_id,            │                                 │
+   │   external_reference}       │                                 │
+   │                             │                                 │
+   │  [usuario paga en browser]  │                                 │
+   │                             │◄── POST /pagos/webhook ────────-│
+   │                             │    {type: "payment",            │
+   │                             │     data.id: "mp_payment_id"}   │
+   │                             │                                 │
+   │  GET /pagos/{id}/estado     │  GET /v1/payments/{id}          │
+   │  [polling desde app]        │  [consulta estado en MP]        │
+   │◄────────────────────────────│────────────────────────────────►│
+   │  {estado: "PAGADO"}         │                                 │
+```
+
+**Detalles técnicos:**
+- Se crea una preferencia con `back_urls` para `success`, `failure` y `pending`.
+- El campo `auto_return: "approved"` redirige automáticamente al usuario tras un pago aprobado.
+- La operación se registra en memoria con estado `PENDIENTE` y un `external_reference` único.
+- El webhook de MercadoPago actualiza el estado y persiste el pago en BD si es aprobado.
+- La app móvil puede consultar el estado vía `GET /pagos/{id}/estado` (polling) o esperar la notificación del webhook.
+- Las operaciones tienen un timeout configurable de **120 segundos**; pasado ese tiempo pasan a estado `EXPIRADO`.
+
+---
+
+### Flujo 3 — Guardar Tarjeta
+
+Asocia una tarjeta de crédito/débito a un Customer de MercadoPago para cobros futuros sin reingreso de datos.
+
+```
+App Móvil                   app-pagos                       MercadoPago API
+   │                             │                                 │
+   │  POST /tarjetas/guardar     │                                 │
+   │  {id_usuario, email, token} │                                 │
+   │────────────────────────────►│                                 │
+   │                             │  [¿Existe customer en BD?]      │
+   │                             │  No →                           │
+   │                             │  POST /v1/customers             │
+   │                             │  {email}                        │
+   │                             │────────────────────────────────►│
+   │                             │◄────────────────────────────────│
+   │                             │  {id: "mp_customer_id"}         │
+   │                             │  [guarda en BD local]           │
+   │                             │                                 │
+   │                             │  POST /v1/customers/{id}/cards  │
+   │                             │  {token: "card_token_xxx"}      │
+   │                             │────────────────────────────────►│
+   │                             │◄────────────────────────────────│
+   │                             │  {id, last_four_digits,         │
+   │                             │   expiration_month/year,        │
+   │                             │   payment_method, cardholder}   │
+   │                             │  [guarda en BD local]           │
+   │                             │                                 │
+   │◄────────────────────────────│                                 │
+   │  {id, brand, last_4,        │                                 │
+   │   expiration, is_default}   │                                 │
+```
+
+**Detalles técnicos:**
+- El `token` de tarjeta debe ser generado previamente en el frontend usando el SDK de MercadoPago (no se envían datos PAN en crudo).
+- Si el usuario no tiene un Customer en MP, se crea automáticamente y se persiste el `mp_customer_id` en BD.
+- Si el Customer ya existe (error 400 código 101), se recupera mediante búsqueda por email.
+- Si la tarjeta ya está asociada al Customer (ya existe), se retorna la tarjeta existente sin duplicar.
+- La primera tarjeta guardada se marca automáticamente como `is_default = true`.
+- Los datos almacenados localmente son: `mp_card_id`, `payment_method_id`, `brand`, `last_four_digits`, `expiration_month`, `expiration_year`, `holder_name`.
+
+---
+
+### Flujo 4 — Pago con Tarjeta Guardada
+
+Ejecuta un cobro utilizando una tarjeta previamente guardada, sin necesidad de reingresar datos.
+
+```
+App Móvil                   app-pagos                       MercadoPago API
+   │                             │                                 │
+   │  POST /tarjetas/pagar       │                                 │
+   │  {id_usuario, id_tarjeta,   │                                 │
+   │   monto, descripcion}       │                                 │
+   │────────────────────────────►│                                 │
+   │                             │  [valida tarjeta y ownership]   │
+   │                             │  [obtiene mp_customer_id]       │
+   │                             │                                 │
+   │                             │  POST /v1/payments              │
+   │                             │  {token: mp_card_id,            │
+   │                             │   transaction_amount,           │
+   │                             │   payment_method_id,            │
+   │                             │   payer.id: mp_customer_id,     │
+   │                             │   installments: 1}              │
+   │                             │────────────────────────────────►│
+   │                             │◄────────────────────────────────│
+   │                             │  {id, status, status_detail}    │
+   │                             │  [persiste en BD]               │
+   │                             │                                 │
+   │◄────────────────────────────│                                 │
+   │  {id_pago, mp_payment_id,   │                                 │
+   │   status, status_detail,    │                                 │
+   │   external_reference}       │                                 │
+```
+
+**Detalles técnicos:**
+- Se valida que la tarjeta pertenezca al usuario que realiza el pago (ownership check).
+- El pago se procesa en **1 cuota** (`installments: 1`).
+- El resultado se persiste directamente en la BD con el estado mapeado desde MercadoPago.
+
+---
+
+### Flujo 5 — Webhook de MercadoPago
+
+MercadoPago notifica eventos de pago al backend mediante webhooks HTTP.
+
+```
+MercadoPago API                  app-pagos (POST /pagos/webhook)
+       │                                       │
+       │  POST /pagos/webhook                  │
+       │  ?type=payment&data.id=12345          │
+       │──────────────────────────────────────►│
+       │                                       │  [GET /v1/payments/12345]
+       │                                       │  consulta estado real en MP
+       │◄──────────────────────────────────────│
+       │  {status: "approved",                 │
+       │   external_reference: "ref_xxx"}      │
+       │                                       │
+       │                                       │  [busca operacion por external_reference]
+       │                                       │  [actualiza estado en memoria y en BD]
+       │                                       │  [persiste pago si estado == "approved"]
+       │                                       │
+       │◄──────────────────────────────────────│
+       │  HTTP 200 {success: true}             │
+```
+
+**Detalles técnicos:**
+- El webhook acepta tanto parámetros por querystring como en el body JSON.
+- Los eventos que no son de tipo `payment` son ignorados con respuesta 200.
+- Se busca la operación en memoria por `external_reference` y se sincroniza con BD.
+- Si ya existe en BD, se actualiza el `estado_pago` y el `codigo_transaccion` (ID de pago en MP).
+
+---
+
+### Cancelación de Pagos
+
+Los pagos pendientes pueden cancelarse desde la app:
+
+```
+POST /pagos/{id_pago}/cancelar
+```
+
+- Si el pago tiene un `mp_payment_id`, se intenta cancelar también en MercadoPago vía `PUT /v1/payments/{id}`.
+- Si el pago ya está en estado final (`PAGADO`, `RECHAZADO`, `EXPIRADO`, `CANCELADO`), se retorna el estado actual sin modificar.
+
+---
+
+### Estados de Pago
+
+| Estado Interno | Estado MercadoPago | Descripción                         |
+|----------------|--------------------|-------------------------------------|
+| `PAGADO`       | `approved`         | Pago aprobado y cobrado             |
+| `PENDIENTE`    | `in_process`       | En revisión o esperando acción      |
+| `RECHAZADO`    | `rejected`         | Pago rechazado por el emisor        |
+| `CANCELADO`    | `cancelled`        | Cancelado por el usuario            |
+| `EXPIRADO`     | —                  | Timeout interno (120 segundos)      |
+| `ANULADO`      | —                  | Anulado manualmente                 |
+
+---
+
+## Aplicación Móvil
+
+Proyecto en **Kotlin Multiplatform Compose** ubicado en `ProyectoGestionPagos/`. Comparte código de UI y lógica de negocio entre Android e iOS.
+
+### Pantallas de Pago
+
+| Pantalla                  | Descripción                                                       |
+|---------------------------|-------------------------------------------------------------------|
+| `PaymentScreen`           | Selección del método de pago (directo, browser, tarjeta guardada) |
+| `PaymentDirectScreen`     | Ingreso manual de datos de tarjeta para pago directo              |
+| `AddCardScreen`           | Tokenización y guardado de nueva tarjeta                          |
+| `SavedCardsScreen`        | Lista de tarjetas guardadas del usuario                           |
+| `PayWithSavedCardScreen`  | Confirmar pago con tarjeta ya guardada                            |
+| `PaymentSuccessScreen`    | Confirmación visual del pago aprobado                             |
+
+### ViewModels
+
+- `PaymentFlowViewModel` — Orquesta los flujos de pago directos y por browser. Gestiona polling de estado y timeouts.
+- `CardViewModel` — Gestiona guardar, listar y eliminar tarjetas. Interactúa con `/tarjetas/*`.
+
+---
+
+## Estructura del Proyecto
 
 ```
 proyecto-microservicios/
 │
-├── docker-compose.yml          # Orquestación de contenedores
-├── .env                        # Variables de entorno
-├── README.md                   # Este archivo
+├── .env                         # Variables de entorno (NO versionar)
+├── docker-compose.yml           # Orquestación de contenedores
+├── README.md
 │
 ├── db/
-│   └── init.sql               # Script de inicialización de BD
+│   ├── init.sql                 # Inicialización de esquema PostgreSQL
+│   └── migrations/
+│       └── 002_tarjetas_guardadas.sql
 │
-├── app-core/                  # MICROSERVICIO PRINCIPAL
+├── app-core/                    # Microservicio principal (Puerto 8001)
 │   ├── app/
-│   │   ├── main.py            # Punto de entrada FastAPI
-│   │   ├── database.py        # Configuración de conexión BD
-│   │   ├── models/            # Modelos SQLAlchemy
-│   │   ├── schemas/           # Esquemas Pydantic
-│   │   ├── routers/           # Endpoints organizados por recurso
-│   │   └── crud/              # Operaciones de base de datos
-│   ├── requirements.txt        # Dependencias Python
-│   └── Dockerfile             # Imagen Docker
+│   │   ├── main.py
+│   │   ├── database.py
+│   │   ├── models/              # Modelos SQLAlchemy
+│   │   ├── schemas/             # Esquemas Pydantic
+│   │   ├── routers/             # Endpoints por recurso
+│   │   ├── crud/                # Operaciones de base de datos
+│   │   └── services/
+│   ├── Dockerfile
+│   └── requirements.txt
 │
-├── app-pagos/                 # MICROSERVICIO DE PAGOS
+├── app-pagos/                   # Microservicio de pagos (Puerto 8002)
+│   ├── app/
+│   │   ├── main.py
+│   │   ├── database.py
+│   │   ├── models/
+│   │   │   ├── pago.py
+│   │   │   ├── tarjeta_guardada.py
+│   │   │   └── mp_customer.py
+│   │   ├── schemas/
+│   │   │   ├── pago.py
+│   │   │   └── tarjeta.py
+│   │   ├── routers/
+│   │   │   ├── pagos.py         # Flujos de pago (directo, checkout, webhook)
+│   │   │   └── tarjetas.py      # CRUD de tarjetas guardadas
+│   │   ├── crud/
+│   │   │   ├── pago.py
+│   │   │   ├── tarjeta_guardada.py
+│   │   │   └── mp_customer.py
+│   │   └── services/
+│   │       └── mercadopago_service.py  # Integración con la API de MercadoPago
+│   ├── Dockerfile
+│   └── requirements.txt
+│
+├── app-notificaciones/          # Microservicio de notificaciones (Puerto 8003)
 │   ├── app/
 │   │   ├── main.py
 │   │   ├── database.py
 │   │   ├── models/
 │   │   ├── schemas/
 │   │   ├── routers/
-│   │   └── crud/
-│   ├── requirements.txt
-│   └── Dockerfile
+│   │   ├── crud/
+│   │   └── services/
+│   ├── Dockerfile
+│   └── requirements.txt
 │
-└── app-notificaciones/        # MICROSERVICIO DE NOTIFICACIONES
-    ├── app/
-    │   ├── main.py
-    │   ├── database.py
-    │   ├── models/
-    │   ├── schemas/
-    │   ├── routers/
-    │   ├── services/          # Servicios de envío (email, SMS, etc)
-    │   └── crud/
-    ├── requirements.txt
-    └── Dockerfile
+└── ProyectoGestionPagos/        # App móvil KMP (Android + iOS)
+    ├── composeApp/
+    │   └── src/
+    │       ├── commonMain/      # Código compartido (UI + ViewModels + Network)
+    │       ├── androidMain/     # Implementaciones específicas Android
+    │       └── iosMain/         # Implementaciones específicas iOS
+    ├── iosApp/                  # Punto de entrada iOS
+    ├── build.gradle.kts
+    └── settings.gradle.kts
 ```
 
-## ⚙️ Requisitos Previos
+---
 
-### Sistema
+## Requisitos Previos
 
-- **OS**: Linux, macOS o Windows (con WSL2)
-- **RAM Mínima**: 2 GB
-- **Almacenamiento**: 2 GB disponibles
-- **Conexión a Internet**: Para descargar imágenes Docker
-
-### Software Requerido
-
-- **Docker**: v20.10 o superior ([Descargar](https://www.docker.com/products/docker-desktop))
-- **Docker Compose**: v2.0 o superior (incluido en Docker Desktop)
-
-### Verificar Instalación
+| Software       | Versión mínima | Notas                                      |
+|----------------|----------------|--------------------------------------------|
+| Docker         | 20.10          | [Docker Desktop](https://www.docker.com/)  |
+| Docker Compose | 2.0            | Incluido en Docker Desktop                 |
+| Android Studio | Koala+         | Para compilar la app Android/iOS           |
+| JDK            | 17             | Requerido por Kotlin Multiplatform         |
 
 ```bash
+# Verificar instalaciones
 docker --version
 docker compose version
 ```
 
-## 🚀 Instalación y Ejecución
+---
 
-### 1. Clonar o Descargar el Proyecto
+## Variables de Entorno
 
-```bash
-git clone <repositorio>
-# o descargar y extraer manualmente
-cd proyecto-microservicios
-```
-
-### 2. Configurar Variables de Entorno
-
-Crear archivo `.env` en la raíz del proyecto:
+Crear el archivo `.env` en la raíz de `proyecto-microservicios/` con el siguiente contenido:
 
 ```env
-# Base de Datos
+# ─── PostgreSQL ──────────────────────────────────────────────────────────────
 POSTGRES_DB=gestion_usuarios_servicios
 POSTGRES_USER=postgres
-POSTGRES_PASSWORD=postgres
+POSTGRES_PASSWORD=tu_password_seguro
+
+# ─── Conexión a BD desde microservicios ──────────────────────────────────────
 DB_HOST=postgres-db
 DB_PORT=5432
 DB_NAME=gestion_usuarios_servicios
 DB_USER=postgres
-DB_PASSWORD=postgres
+DB_PASSWORD=tu_password_seguro
 
-# Aplicaciones
-PYTHONUNBUFFERED=1
+# ─── MercadoPago ─────────────────────────────────────────────────────────────
+# Obtener en: https://www.mercadopago.com/developers/panel/credentials
+MP_ACCESS_TOKEN=APP_USR-xxxxxxxxxxxxxxxxxxxx   # Access Token de TEST o PROD
+MP_PUBLIC_KEY=APP_USR-xxxxxxxxxxxxxxxxxxxx      # Public Key (usada en el frontend)
+
+# URLs de retorno después del checkout
+MP_SUCCESS_URL=https://tudominio.com/pago/exitoso
+MP_FAILURE_URL=https://tudominio.com/pago/fallido
+MP_PENDING_URL=https://tudominio.com/pago/pendiente
+
+# URL pública donde MercadoPago enviará los webhooks
+# Debe ser accesible desde internet (usar ngrok en desarrollo)
+MP_WEBHOOK_URL=https://tudominio.com/pagos/webhook
 ```
 
-### 3. Levantar los Servicios
+> **Credenciales de prueba**: Obtén tu `ACCESS_TOKEN` y `PUBLIC_KEY` de sandbox en el
+> [Panel de Desarrolladores de MercadoPago](https://www.mercadopago.com/developers/panel/credentials).
+> Las credenciales de TEST comienzan con `TEST-` y las de producción con `APP_USR-`.
+
+---
+
+## Instalación y Ejecución
+
+### 1. Clonar el repositorio
 
 ```bash
-# Construir e iniciar todos los contenedores
-docker compose up --build
+git clone <repositorio>
+cd proyecto-microservicios
+```
 
-# O en segundo plano
+### 2. Configurar variables de entorno
+
+```bash
+cp .env.example .env
+# Editar .env con tus credenciales de MercadoPago y base de datos
+```
+
+### 3. Levantar los servicios
+
+```bash
+# Construir e iniciar en background
 docker compose up -d --build
 
 # Ver logs en tiempo real
 docker compose logs -f
+
+# Ver solo el microservicio de pagos
+docker compose logs -f app-pagos
 ```
 
-### 4. Verificar que los Servicios Estén Activos
+### 4. Verificar que los servicios estén activos
 
 ```bash
-# Revisar estado de contenedores
-docker compose ps
-
-# Probar conectividad
-curl http://localhost:8001/health
-curl http://localhost:8002/health
-curl http://localhost:8003/health
+curl http://localhost:8001/health   # App Core
+curl http://localhost:8002/health   # App Pagos
+curl http://localhost:8003/health   # App Notificaciones
 ```
 
-## 📚 Documentación API
+### 5. Webhook local (desarrollo)
 
-Cada microservicio expone documentación interactiva Swagger:
-
-| Servicio | URL Swagger |
-|----------|------------|
-| App Core | http://localhost:8001/docs |
-| App Pagos | http://localhost:8002/docs |
-| App Notificaciones | http://localhost:8003/docs |
-
-También disponible ReDoc (alternativa a Swagger):
-
-| Servicio | URL ReDoc |
-|----------|-----------|
-| App Core | http://localhost:8001/redoc |
-| App Pagos | http://localhost:8002/redoc |
-| App Notificaciones | http://localhost:8003/redoc |
-
-## 🔍 Endpoints Principales
-
-### App Core - Usuarios (Puerto 8001)
-
-```
-POST   /usuarios              # Crear usuario
-GET    /usuarios              # Listar usuarios con paginación
-GET    /usuarios/{id}         # Obtener usuario específico
-PUT    /usuarios/{id}         # Actualizar usuario
-DELETE /usuarios/{id}         # Eliminar usuario
-```
-
-**Ejemplo:**
-```bash
-curl -X POST http://localhost:8001/usuarios \
-  -H "Content-Type: application/json" \
-  -d '{
-    "nombre": "Juan",
-    "email": "juan@example.com",
-    "telefono": "+34123456789"
-  }'
-```
-
-### App Core - Planes Mensuales
-
-```
-POST   /planes                # Crear plan
-GET    /planes                # Listar planes
-GET    /planes/{id}           # Obtener plan
-PUT    /planes/{id}           # Actualizar plan
-DELETE /planes/{id}           # Eliminar plan
-```
-
-### App Core - Servicios
-
-```
-POST   /servicios             # Crear servicio
-GET    /servicios             # Listar servicios
-GET    /servicios/{id}        # Obtener servicio
-PUT    /servicios/{id}        # Actualizar servicio
-DELETE /servicios/{id}        # Eliminar servicio
-```
-
-### App Core - Métodos de Pago
-
-```
-POST   /metodos-pago          # Crear método de pago
-GET    /metodos-pago          # Listar métodos
-GET    /metodos-pago/{id}     # Obtener método
-PUT    /metodos-pago/{id}     # Actualizar método
-DELETE /metodos-pago/{id}     # Eliminar método
-```
-
-### App Core - Suscripciones
-
-```
-POST   /suscripciones                      # Crear suscripción
-GET    /suscripciones                      # Listar suscripciones
-GET    /suscripciones/{id}                 # Obtener suscripción
-GET    /suscripciones/usuario/{id_usuario} # Suscripciones por usuario
-PUT    /suscripciones/{id}                 # Actualizar suscripción
-DELETE /suscripciones/{id}                 # Cancelar suscripción
-```
-
-### App Core - Usuarios-Servicios
-
-```
-POST   /usuarios-servicios                      # Contratar servicio
-GET    /usuarios-servicios                      # Listar contratos
-GET    /usuarios-servicios/{id}                 # Obtener contrato
-GET    /usuarios-servicios/usuario/{id_usuario} # Servicios por usuario
-PUT    /usuarios-servicios/{id}                 # Actualizar contrato
-DELETE /usuarios-servicios/{id}                 # Cancelar servicio
-```
-
-### App Core - Facturas
-
-```
-POST   /facturas                    # Crear factura
-GET    /facturas                    # Listar facturas
-GET    /facturas/{id}               # Obtener factura
-GET    /facturas/pago/{id_pago}     # Facturas por pago
-PUT    /facturas/{id}               # Actualizar factura
-DELETE /facturas/{id}               # Eliminar factura
-```
-
-### App Core - Detalle de Facturas
-
-```
-POST   /detalle-factura                      # Crear detalle
-GET    /detalle-factura                      # Listar detalles
-GET    /detalle-factura/{id}                 # Obtener detalle
-GET    /detalle-factura/factura/{id_factura} # Detalles por factura
-PUT    /detalle-factura/{id}                 # Actualizar detalle
-DELETE /detalle-factura/{id}                 # Eliminar detalle
-```
-
-### App Pagos (Puerto 8002)
-
-```
-POST   /pagos                              # Registrar pago
-GET    /pagos                              # Listar pagos
-GET    /pagos/{id}                         # Obtener pago
-GET    /pagos/usuario/{id_usuario}         # Pagos de usuario
-GET    /pagos/periodo/{anio}/{mes}         # Pagos por período
-GET    /pagos/suscripcion/{id_suscripcion} # Pagos de suscripción
-PUT    /pagos/{id}                         # Actualizar pago
-PATCH  /pagos/{id}/estado                  # Cambiar estado
-POST   /pagos/{id}/anular                  # Anular pago
-DELETE /pagos/{id}                         # Eliminar pago
-```
-
-### App Notificaciones (Puerto 8003)
-
-```
-POST   /notificaciones/email                    # Enviar email
-POST   /notificaciones/sms                      # Enviar SMS
-POST   /notificaciones/interna                  # Notificación interna
-GET    /notificaciones                          # Listar notificaciones
-GET    /notificaciones/{id}                     # Obtener notificación
-GET    /notificaciones/usuario/{id_usuario}     # Por usuario
-PATCH  /notificaciones/{id}/estado              # Cambiar estado
-DELETE /notificaciones/{id}                     # Eliminar notificación
-```
-
-## 🔧 Health Checks
-
-Cada servicio expone un endpoint de salud:
+Para recibir webhooks de MercadoPago en local, usar ngrok:
 
 ```bash
-# App Core
-curl http://localhost:8001/health
-
-# App Pagos
-curl http://localhost:8002/health
-
-# App Notificaciones
-curl http://localhost:8003/health
+ngrok http 8002
+# Copiar la URL https://xxxx.ngrok.io y asignarla a MP_WEBHOOK_URL en .env
+# Reiniciar: docker compose up -d
 ```
 
-Respuesta exitosa:
+---
+
+## Documentación API
+
+| Servicio           | Swagger UI                      | ReDoc                          |
+|--------------------|---------------------------------|--------------------------------|
+| App Core           | http://localhost:8001/docs      | http://localhost:8001/redoc    |
+| App Pagos          | http://localhost:8002/docs      | http://localhost:8002/redoc    |
+| App Notificaciones | http://localhost:8003/docs      | http://localhost:8003/redoc    |
+
+---
+
+## Endpoints de Pagos
+
+### Pago Directo con Tarjeta
+
+```
+POST /pagos/directo/procesar
+```
 ```json
 {
-  "status": "healthy",
-  "timestamp": "2024-01-15T10:30:00Z"
+  "id_usuario": 1,
+  "numero_tarjeta": "4111111111111111",
+  "mes_vencimiento": 11,
+  "anio_vencimiento": 2030,
+  "cvv": "123",
+  "nombre_titular": "JUAN PEREZ",
+  "email": "juan@example.com",
+  "descripcion": "Suscripción mensual Plan Pro",
+  "monto": 9990
 }
 ```
 
-## 🗄️ Base de Datos
+### Crear Pago por Checkout (Browser)
 
-### Características
+```
+POST /pagos/crear
+```
+```json
+{
+  "id_usuario": 1,
+  "email_pagador": "juan@example.com",
+  "descripcion": "Suscripción mensual Plan Pro",
+  "monto": 9990
+}
+```
 
-- **Motor**: PostgreSQL 15
-- **Inicialización Automática**: Al levantar con `docker compose up`
-- **Persistencia**: Datos se guardan entre reinicios
-- **Acceso**: `localhost:5432`
+### Consultar Estado de Pago
+
+```
+GET /pagos/{id_pago}/estado
+```
+
+### Cancelar Pago
+
+```
+POST /pagos/{id_pago}/cancelar
+```
+
+### Guardar Tarjeta
+
+```
+POST /tarjetas/guardar
+```
+```json
+{
+  "id_usuario": 1,
+  "email": "juan@example.com",
+  "token": "card_token_generado_por_sdk_mp"
+}
+```
+
+### Listar Tarjetas Guardadas
+
+```
+GET /tarjetas/usuario/{id_usuario}
+```
+
+### Pagar con Tarjeta Guardada
+
+```
+POST /tarjetas/pagar
+```
+```json
+{
+  "id_usuario": 1,
+  "id_tarjeta": 3,
+  "monto": 9990,
+  "descripcion": "Suscripción mensual Plan Pro"
+}
+```
+
+### Marcar Tarjeta como Default
+
+```
+PATCH /tarjetas/{id_tarjeta}/default
+```
+
+### Eliminar Tarjeta Guardada
+
+```
+DELETE /tarjetas/{id_tarjeta}?id_usuario={id_usuario}
+```
+
+### Webhook (uso interno — llamado por MercadoPago)
+
+```
+POST /pagos/webhook
+```
+
+---
+
+## Base de Datos
 
 ### Tablas Principales
 
-| Tabla | Descripción |
-|-------|------------|
-| `usuario` | Información de usuarios registrados |
-| `plan_mensual` | Planes de suscripción disponibles |
-| `servicio` | Servicios ofrecidos |
-| `metodo_pago` | Métodos de pago de usuarios |
-| `suscripcion` | Suscripciones activas de usuarios |
-| `usuario_servicio` | Servicios contratados por usuario |
-| `pago` | Registro de pagos realizados |
-| `factura` | Facturas generadas |
-| `detalle_factura` | Detalles de cada factura |
-| `notificacion` | Notificaciones enviadas/pendientes |
+| Tabla               | Descripción                                                    |
+|---------------------|----------------------------------------------------------------|
+| `usuario`           | Usuarios registrados                                           |
+| `plan_mensual`      | Planes de suscripción                                          |
+| `servicio`          | Catálogo de servicios                                          |
+| `metodo_pago`       | Métodos de pago genéricos (interno)                            |
+| `suscripcion`       | Suscripciones activas                                          |
+| `usuario_servicio`  | Servicios contratados por usuario                              |
+| `pago`              | Registro de pagos procesados vía MercadoPago                   |
+| `factura`           | Facturas generadas                                             |
+| `detalle_factura`   | Líneas de detalle de cada factura                              |
+| `mp_customer`       | Relación usuario ↔ Customer ID de MercadoPago                 |
+| `tarjeta_guardada`  | Tarjetas tokenizadas asociadas a Customers de MercadoPago      |
+| `notificacion`      | Notificaciones emitidas                                        |
 
 ### Conectarse a la Base de Datos
 
 ```bash
-# Con psql
-psql -h localhost -U postgres -d gestion_usuarios_servicios
-
-# Con Docker
+# Vía Docker Compose
 docker compose exec postgres-db psql -U postgres -d gestion_usuarios_servicios
+
+# Vía psql local
+psql -h localhost -U postgres -d gestion_usuarios_servicios
 ```
 
-## ⚙️ Configuración
+---
 
-### Variables de Entorno
+## Troubleshooting
 
-El archivo `.env` controla:
+### Error: `MP_ACCESS_TOKEN no está configurado`
 
-```env
-# Credenciales PostgreSQL
-POSTGRES_DB=gestion_usuarios_servicios
-POSTGRES_USER=postgres
-POSTGRES_PASSWORD=postgres
-
-# Conexión desde aplicaciones
-DB_HOST=postgres-db
-DB_PORT=5432
-DB_NAME=gestion_usuarios_servicios
-DB_USER=postgres
-DB_PASSWORD=postgres
-
-# Python
-PYTHONUNBUFFERED=1
-```
-
-### Personalizar Configuración
-
-Para cambiar puertos, credenciales u otros parámetros:
-
-1. Editar `.env`
-2. Actualizar `docker-compose.yml` si es necesario
-3. Ejecutar: `docker compose up --build -d`
-
-## 💻 Desarrollo Local
-
-### Sin Docker (Desarrollo)
-
-#### 1. Crear Entorno Virtual
+Verifica que el archivo `.env` existe en la raíz y contiene la variable `MP_ACCESS_TOKEN`.
 
 ```bash
-# Linux/macOS
-python3 -m venv venv
-source venv/bin/activate
-
-# Windows
-python -m venv venv
-venv\Scripts\activate
+docker compose exec app-pagos env | grep MP_ACCESS_TOKEN
 ```
 
-#### 2. Instalar Dependencias
+### Error 400 al crear pago: `invalid_token` / `bad_request`
+
+El token de tarjeta es de un solo uso y expira en minutos. Genera un nuevo token desde el SDK de MercadoPago antes de cada pago directo.
+
+### Error 400: Customer ya existe en MercadoPago
+
+El servicio lo maneja automáticamente. Si `create_customer` retorna error 400 con código 101 ("already exists"), se recupera el customer existente por email via `search_customer_by_email`.
+
+### Los webhooks no llegan
+
+1. Verifica que `MP_WEBHOOK_URL` apunte a una URL públicamente accesible.
+2. Usa `ngrok http 8002` en desarrollo para exponer el servicio local.
+3. Registra la URL en el Panel de Desarrolladores de MercadoPago.
+
+### Contenedores no inician
 
 ```bash
-cd app-core
-pip install -r requirements.txt
-```
-
-#### 3. Configurar Base de Datos
-
-```bash
-# Asegúrate de tener PostgreSQL corriendo
-# Crear base de datos
-psql -U postgres -c "CREATE DATABASE gestion_usuarios_servicios;"
-
-# Ejecutar migrations (si existen)
-# python -m alembic upgrade head
-```
-
-#### 4. Ejecutar Aplicación
-
-```bash
-uvicorn app.main:app --reload --port 8001
-```
-
-Repetir pasos 2-4 para `app-pagos` (puerto 8002) y `app-notificaciones` (puerto 8003)
-
-### Con Docker Compose para Desarrollo
-
-```bash
-# Ver logs en tiempo real
-docker compose logs -f app-core
-
-# Entrar a contenedor
-docker compose exec app-core bash
-
-# Ejecutar comandos en contenedor
-docker compose exec app-core python -c "import app"
-```
-
-## 🐛 Troubleshooting
-
-### Problema: "Error de conexión a la base de datos"
-
-**Solución:**
-```bash
-# Verificar que PostgreSQL está activo
-docker compose ps | grep postgres
-
-# Reiniciar servicios
-docker compose restart
-
-# Revisar logs
-docker compose logs postgres-db
-```
-
-### Problema: "Puerto 8001/8002/8003 ya en uso"
-
-**Solución:**
-```bash
-# Ver qué proceso usa el puerto
-lsof -i :8001  # macOS/Linux
-netstat -ano | findstr :8001  # Windows
-
-# Cambiar puertos en docker-compose.yml
-# O detener el proceso que usa el puerto
-```
-
-### Problema: "Contenedores no se inician"
-
-**Solución:**
-```bash
-# Reconstruir completamente
 docker compose down -v
 docker compose up --build
-
-# Limpiar imágenes no usadas
-docker image prune -a
 ```
 
-### Problema: "Datos no persisten"
+### Puerto 8001/8002/8003 en uso
 
-**Solución:**
 ```bash
-# Verificar volúmenes
-docker volume ls
-
-# Recrear volúmenes
-docker compose down -v
-docker compose up -d
+lsof -i :8002        # macOS/Linux
+netstat -ano | findstr :8002  # Windows
 ```
 
-### Problema: "Error de permisos en Linux"
+---
 
-**Solución:**
-```bash
-# Añadir usuario al grupo docker
-sudo usermod -aG docker $USER
-
-# Aplicar cambios (logout/login o ejecutar)
-newgrp docker
-```
-
-## 📊 Tecnologías Utilizadas
+## Tecnologías
 
 ### Backend
 
-| Tecnología | Versión | Uso |
-|-----------|---------|-----|
-| Python | 3.12+ | Lenguaje principal |
-| FastAPI | 0.100+ | Framework web asincrónico |
-| SQLAlchemy | 2.0+ | ORM para base de datos |
-| Pydantic | 2.0+ | Validación de datos |
-| Uvicorn | 0.23+ | Servidor ASGI |
+| Tecnología     | Uso                                              |
+|----------------|--------------------------------------------------|
+| Python 3.11+   | Lenguaje principal                               |
+| FastAPI        | Framework web async (REST + WebSocket)           |
+| SQLAlchemy 2.0 | ORM para PostgreSQL                              |
+| Pydantic 2.0   | Validación y serialización de datos              |
+| Uvicorn        | Servidor ASGI                                    |
+| mercadopago SDK| Cliente oficial de la API de MercadoPago         |
+| requests       | Llamadas HTTP directas a la API REST de MP       |
+| python-dotenv  | Carga de variables de entorno                    |
 
 ### Infraestructura
 
-| Tecnología | Versión | Uso |
-|-----------|---------|-----|
-| PostgreSQL | 15 | Base de datos relacional |
-| Docker | 20.10+ | Contenedorización |
-| Docker Compose | 2.0+ | Orquestación |
+| Tecnología      | Uso                        |
+|-----------------|----------------------------|
+| PostgreSQL 15   | Base de datos relacional   |
+| Docker          | Contenedorización          |
+| Docker Compose  | Orquestación local         |
 
-### Características de FastAPI
+### App Móvil
 
-- 📖 Documentación automática (Swagger UI)
-- 🔄 Reload automático en desarrollo
-- ⚡ Alto rendimiento (ASGI)
-- 🛡️ Validación de datos automática
-- 📊 Esquemas OpenAPI
+| Tecnología                   | Uso                                     |
+|------------------------------|-----------------------------------------|
+| Kotlin Multiplatform (KMP)   | Código compartido Android + iOS         |
+| Compose Multiplatform        | UI declarativa multiplataforma          |
+| Ktor Client                  | Comunicación HTTP con los microservicios|
 
-## 📋 Datos de Ejemplo
+---
 
-La base de datos se inicializa con datos de ejemplo:
+## Seguridad
 
-- 5 usuarios de prueba
-- 3 planes mensuales
-- 10 servicios disponibles
-- 2 métodos de pago por usuario
-- Suscripciones y pagos de ejemplo
+- Los `ACCESS_TOKEN` y `PUBLIC_KEY` de MercadoPago **nunca deben commitearse** al repositorio. Usar siempre el archivo `.env` (incluido en `.gitignore`).
+- Los datos PAN de tarjeta no se almacenan. El backend solo guarda el `mp_card_id` y los últimos 4 dígitos.
+- Cada transacción de pago directo usa una `X-Idempotency-Key` única para prevenir cobros duplicados.
+- Los endpoints de tarjetas validan que el `id_usuario` sea el propietario antes de cualquier operación.
+- Para producción: implementar autenticación JWT, HTTPS/TLS y rate limiting sobre los endpoints de pagos.
 
-**Nota**: Estos datos se crean automáticamente en la primera ejecución.
+---
 
-## 🔄 Comandos Útiles
+## Comandos Útiles
 
 ```bash
-# Iniciar servicios
+# Levantar servicios
 docker compose up -d
 
 # Ver estado
 docker compose ps
 
-# Ver logs
-docker compose logs -f [servicio]
+# Ver logs de un servicio específico
+docker compose logs -f app-pagos
 
-# Detener servicios
-docker compose stop
+# Reconstruir imagen de un servicio
+docker compose build --no-cache app-pagos
 
-# Reiniciar servicios
-docker compose restart [servicio]
+# Reiniciar un servicio
+docker compose restart app-pagos
 
-# Reconstruir imágenes
-docker compose build --no-cache
-
-# Eliminar todo (incluidos volúmenes)
+# Detener y eliminar todo (incluidos volúmenes)
 docker compose down -v
 
-# Ejecutar comando en contenedor
-docker compose exec [servicio] [comando]
-
-# Acceder a bash en contenedor
-docker compose exec [servicio] bash
+# Ejecutar comando dentro de un contenedor
+docker compose exec app-pagos bash
 ```
-
-## 🔐 Seguridad
-
-**Nota**: Esta es una aplicación de demostración. Para producción:
-
-- ✅ Cambiar credenciales de base de datos
-- ✅ Implementar autenticación (JWT, OAuth)
-- ✅ Usar HTTPS/TLS
-- ✅ Implementar rate limiting
-- ✅ Validar y sanitizar inputs
-- ✅ Usar secrets management
-- ✅ Implementar logging y monitoreo
-- ✅ Configurar CORS restringido
-
-## 📈 Escalabilidad
-
-Para escalar a producción:
-
-1. **Separar bases de datos** por microservicio
-2. **Implementar API Gateway** (Kong, nginx)
-3. **Añadir caché** (Redis)
-4. **Implementar colas** (RabbitMQ, Celery)
-5. **Usar balancador de carga**
-6. **Monitoreo** (Prometheus, Grafana)
-7. **Logging centralizado** (ELK Stack)
-8. **CI/CD** (GitHub Actions, Jenkins)
-
-## 🤝 Contribución
-
-1. Fork el proyecto
-2. Crear rama de feature (`git checkout -b feature/AmazingFeature`)
-3. Commit cambios (`git commit -m 'Add some AmazingFeature'`)
-4. Push a la rama (`git push origin feature/AmazingFeature`)
-5. Abrir Pull Request
-
-## 📞 Soporte
-
-Para problemas o preguntas:
-
-1. Revisar sección [Troubleshooting](#troubleshooting)
-2. Consultar logs: `docker compose logs`
-3. Verificar documentación API en `/docs`
-
-## 📄 Licencia
-
-Proyecto de ejemplo para gestión de usuarios y servicios. Libre para uso educativo y comercial.
-
-## ✨ Mejoras Futuras
-
-- [ ] Autenticación y autorización (JWT)
-- [ ] Rate limiting y throttling
-- [ ] Sistema de caché distribuido
-- [ ] Colas de procesamiento asincrónico
-- [ ] Webhooks para eventos
-- [ ] Testing automatizado (unittest, pytest)
-- [ ] Documentación de API completa
-- [ ] Dashboard de administración
-- [ ] Reportes y analytics
-- [ ] Integración con pasarelas de pago reales
 
 ---
 
-**Última actualización**: 2024  
-**Mantenedor**: Tu Nombre/Equipo
+**Última actualización**: Abril 2026
